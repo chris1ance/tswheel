@@ -4,65 +4,19 @@ from typing import Union, Literal
 import pandas as pd
 from fredapi import Fred
 import altair as alt
+from functools import lru_cache
+
+pd.set_option("mode.copy_on_write", True)
 
 
-def make_zero_hline_plot(yticks: list[Union[int, float]]):
-    """
-    Create a horizontal line at y=0 for charts that include both positive and negative values.
+class LinePlotter:
+    def __init__(self, fred_api_key: str | None = None):
+        self.fred_api_key = fred_api_key
+        self.recession_bars_plot = None
 
-    Parameters:
-    -----------
-    yticks : list[Union[int,float]]
-        List of y-axis tick values that define the plot's y-axis scale domain.
-
-    Returns:
-    --------
-    alt.Chart
-        An Altair chart object containing a black horizontal line at y=0.
-        The line spans the full width of the plot and has a thickness of 3 pixels.
-
-    Notes:
-    ------
-    This function is typically used as an overlay on other charts to clearly demarcate
-    the boundary between positive and negative values.
-    """
-    plot = (
-        alt.Chart(pd.DataFrame({"Value": [0]}))
-        .mark_rule(color="black", size=3)
-        .encode(
-            y=alt.Y(
-                "Value:Q",
-                scale=alt.Scale(domain=[yticks[0], yticks[-1]]),
-                axis=alt.Axis(values=yticks),
-            )
-        )
-    )
-
-    return plot
-
-
-class RecessionBars:
-    """
-    A class for creating and visualizing recession period data from FRED (Federal Reserve Economic Data).
-
-    This class provides functionality to fetch recession dates from FRED and create
-    visualization overlays showing recession periods as gray bars on time series plots.
-
-    Methods:
-    --------
-    get_recession_periods:
-        Fetches recession start and end dates from FRED database.
-    make_recession_bars_plot:
-        Creates an Altair chart with gray bars representing recession periods.
-    """
-
-    def __init__(self):
-        """Initialize the RecessionBars class."""
-        pass
-
-    @staticmethod
+    @lru_cache(maxsize=None)
     def get_recession_periods(
-        fred_api_key: str,
+        self,
         start_date: str | None = None,
         end_date: str | None = None,
         nber_based: bool = True,
@@ -72,8 +26,6 @@ class RecessionBars:
 
         Parameters:
         -----------
-        fred_api_key: str
-            FRED API key, a 32 character lower-cased alpha-numeric string.
         start_date : str, optional
             Start date for data retrieval (default: '1900-01-01') in 'YYYY-MM-DD' format
         end_date : str, optional
@@ -99,7 +51,7 @@ class RecessionBars:
         if not start_date:
             start_date = "1900-01-01"
 
-        fred = Fred(api_key=fred_api_key)
+        fred = Fred(api_key=self.fred_api_key)
         fred_recession_code = "USREC" if nber_based else "USRECM"
 
         try:
@@ -149,7 +101,6 @@ class RecessionBars:
 
     def make_recession_bars_plot(
         self,
-        fred_api_key: str,
         start_date: str | None = None,
         end_date: str | None = None,
         nber_based: bool = True,
@@ -159,8 +110,6 @@ class RecessionBars:
 
         Parameters:
         -----------
-        fred_api_key : str
-            FRED API key, a 32 character lower-cased alpha-numeric string.
         start_date : str, optional
             Start date for data retrieval in 'YYYY-MM-DD' format.
             If None, defaults to '1900-01-01'.
@@ -183,7 +132,6 @@ class RecessionBars:
         and can be layered with other charts using the + operator.
         """
         recession_spans = self.get_recession_periods(
-            fred_api_key=fred_api_key,
             start_date=start_date,
             end_date=end_date,
             nber_based=nber_based,
@@ -197,172 +145,256 @@ class RecessionBars:
 
         return recession_bars_plot
 
+    @staticmethod
+    def make_zero_hline_plot(yticks: list[Union[int, float]]):
+        """
+        Create a horizontal line at y=0 for charts that include both positive and negative values.
 
-def make_line_chart(
-    data: pd.DataFrame,
-    series_colors: dict[str, str],
-    y_tick_min: int | float,
-    y_tick_max: int | float,
-    y_tick_step: int | float,
-    fred_api_key: str | None = None,
-    date_format: str = "%Y",
-    title: str = "",
-    title_font_size: int = 24,
-    x_axis_title: str | None = None,
-    y_axis_title: str | None = None,
-    axis_title_font_size: int = 20,
-    tick_font_size: int = 18,
-    x_ticks_angle: int = 0,
-    width: int = 800,
-    height: int = 400,
-    legend_box_orient: Literal[
-        "none",
-        "left",
-        "right",
-        "top",
-        "bottom",
-        "top-left",
-        "top-right",
-        "bottom-left",
-        "bottom-right",
-    ] = "top-left",
-):
-    """
-    Create an Altair line plot from time series data with optional recession bars overlay.
+        Parameters:
+        -----------
+        yticks : list[Union[int,float]]
+            List of y-axis tick values that define the plot's y-axis scale domain.
 
-    Parameters:
-    -----------
-    data : pd.DataFrame
-        Time series data with DateTime index and columns for each time series to plot.
-    series_colors : dict[str,str]
-        Dictionary mapping series names to their desired colors.
-    y_tick_min : int|float
-        Minimum value for y-axis ticks.
-    y_tick_max : int|float
-        Maximum value for y-axis ticks.
-    y_tick_step : int|float
-        Step size between y-axis ticks.
-    fred_api_key : str|None, optional
-        FRED API key for adding recession bars. If None, no recession bars are added.
-    date_format : str, optional
-        Format string for x-axis date labels. Default: "%Y" (year only).
-    title : str, optional
-        Chart title. Default: "" (no title).
-    title_font_size : int, optional
-        Font size for chart title in pixels. Default: 24.
-    x_axis_title : str|None, optional
-        X-axis title. If None, no title is shown.
-    y_axis_title : str|None, optional
-        Y-axis title. If None, no title is shown.
-    axis_title_font_size : int, optional
-        Font size for axis titles in pixels. Default: 20.
-    tick_font_size : int, optional
-        Font size for axis tick labels in pixels. Default: 18.
-    x_ticks_angle : int, optional
-        Rotation angle for x-axis tick labels in degrees. Default: 0.
-    width : int, optional
-        Chart width in pixels. Default: 800.
-    height : int, optional
-        Chart height in pixels. Default: 400.
-    legend_box_orient : Literal["none", "left", "right", "top", "bottom", "top-left", "top-right", "bottom-left", "bottom-right"], optional
-        Position of the legend box in the plot. Default: "top-left".
+        Returns:
+        --------
+        alt.Chart
+            An Altair chart object containing a black horizontal line at y=0.
+            The line spans the full width of the plot and has a thickness of 3 pixels.
 
-    Returns:
-    --------
-    alt.Chart
-        An Altair chart object containing the line plot with specified customizations.
+        Notes:
+        ------
+        This function is typically used as an overlay on other charts to clearly demarcate
+        the boundary between positive and negative values.
+        """
+        plot = (
+            alt.Chart(pd.DataFrame({"Value": [0]}))
+            .mark_rule(color="black", size=3)
+            .encode(
+                y=alt.Y(
+                    "Value:Q",
+                    scale=alt.Scale(domain=[yticks[0], yticks[-1]]),
+                    axis=alt.Axis(values=yticks),
+                )
+            )
+        )
 
-    Notes:
-    ------
-    - The function automatically adds a horizontal line at y=0 if the y-axis range includes both
-      positive and negative values.
-    - If a FRED API key is provided, gray bars indicating recession periods will be overlaid on the plot.
-    - Y-axis gridlines are dashed and dark gray, while x-axis gridlines are disabled.
-    - The chart clips any marks that fall outside the specified scale domain.
-    """
+        return plot
 
-    df_melted = data.reset_index(names="Date")
+    @staticmethod
+    def elicit_date_column(df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Standardize date handling in a DataFrame by ensuring a 'date' column exists
+        and is in timestamp format.
 
-    # Melt the DataFrame for Altair's long format
-    df_melted = df_melted.melt(id_vars=["Date"], var_name="Series", value_name="Value")
+        Parameters:
+            df (pd.DataFrame): Input DataFrame with date information either in index
+                            or in a column named 'date' or 'Date'
 
-    # Customize the x-axis
-    alt_x = alt.X(
-        "Date:T",
-        axis=alt.Axis(
-            title=x_axis_title,
-            titleFontSize=axis_title_font_size,
-            format=date_format,
-            labelFontSize=tick_font_size,
-            labelAngle=x_ticks_angle,
-        ),
-        scale=alt.Scale(nice=True),
-    )
+        Returns:
+            pd.DataFrame: DataFrame with standardized date column
 
-    # Customize the y-axis
-    yticks = list(range(y_tick_min, y_tick_max + y_tick_step, y_tick_step))
-    alt_y = alt.Y(
-        "Value:Q",
-        scale=alt.Scale(domain=[yticks[0], yticks[-1]]),
-        axis=alt.Axis(
-            values=yticks,
-            title=y_axis_title,
-            titleFontSize=axis_title_font_size,
-            labelFontSize=tick_font_size,
-            titleAnchor="start",  # Puts y-axis title in bottom left corner of plot
-            titleAngle=0,  # Makes y-axis title horizontal
-            titleY=-10,  # Moves y-axis title up to the upper left corner of plot
-        ),
-    )
+        Raises:
+            TypeError: If input is not a pandas DataFrame
+            ValueError: If no eligible date column is found
+        """
+        if not isinstance(df, pd.DataFrame):
+            raise TypeError("Input must be a pandas DataFrame")
 
-    # Customize series legend
-    alt_legend = alt.Legend(
-        title=None,
-        labelFontSize=axis_title_font_size,
-        offset=3,  # Offset in pixels by which to displace the legend from the data rectangle and axes.
-        symbolSize=300,  # Length of the variable’s stroke in the legend
-        symbolStrokeWidth=20,  # Width of the variable’s stroke in the legend
-        orient=legend_box_orient,  # Position of legend box in plot
-        labelLimit=0,  # Ensures labels are not truncated
-        strokeColor="black",  # Color of border around the legend
-        fillColor="white",  # Background color of the legend box
-    )
+        _df = df.copy()
 
-    # Series colors and series legend
-    series_names = list(series_colors.keys())
-    series_colors = list(series_colors.values())
-    alt_scale = alt.Scale(domain=series_names, range=series_colors)
-    alt_color = alt.Color("Series:N", scale=alt_scale, legend=alt_legend)
+        # Handle "Date" column
+        if "Date" in _df:
+            _df = _df.rename(columns={"Date": "date"})
 
-    # Make chart
-    # clip=True: Clip any marks (e.g. lines or points) falling outside specified scale domain
-    chart = (
-        alt.Chart(df_melted)
-        .mark_line(size=4, clip=True)
-        .encode(x=alt_x, y=alt_y, color=alt_color)
-    )
+        # Handle Period Index
+        if isinstance(_df.index.dtype, pd.PeriodDtype):
+            _df.index = _df.index.to_timestamp()
+            _df = _df.reset_index(names="date")
 
-    recession_bars = RecessionBars().make_recession_bars_plot(
-        fred_api_key, start_date=data.index[0], end_date=data.index[-1]
-    )
+        # Handle DateTime Index
+        elif pd.api.types.is_datetime64_any_dtype(_df.index):
+            if (not _df.index.name) or (
+                _df.index.name and _df.index.name.lower() != "date"
+            ):
+                _df.index.name = "date"
+            _df = df.reset_index()
 
-    if fred_api_key:
-        chart += recession_bars
+        # Handle Period column
+        elif "date" in _df:
+            if isinstance(_df["date"].dtype, pd.PeriodDtype):
+                _df["date"] = _df["date"].dt.to_timestamp()
 
-    if any([y < 0 for y in yticks]):
-        black_hline_plot = make_zero_hline_plot(yticks)
-        chart += black_hline_plot
+        # Raise exception
+        else:
+            raise ValueError("No eligible date column found in input dataframe.")
 
-    # Customize plot title
-    alt_title = alt.TitleParams(text=title, fontSize=title_font_size)
+        return _df
 
-    chart = (
-        chart.properties(width=width, height=height, title=alt_title)
-        .configure_axisX(grid=False)
-        .configure_axisY(gridDash=[2, 2], gridColor="darkgray")
-    )
+    def make_line_chart(
+        self,
+        data: pd.DataFrame,
+        series_colors: dict[str, str],
+        y_tick_min: int | float,
+        y_tick_max: int | float,
+        y_tick_step: int | float,
+        date_format: str = "%Y",
+        title: str = "",
+        title_font_size: int = 24,
+        x_axis_title: str | None = None,
+        y_axis_title: str | None = None,
+        axis_title_font_size: int = 20,
+        tick_font_size: int = 18,
+        x_ticks_angle: int = 0,
+        width: int = 800,
+        height: int = 400,
+        legend_box_orient: Literal[
+            "none",
+            "left",
+            "right",
+            "top",
+            "bottom",
+            "top-left",
+            "top-right",
+            "bottom-left",
+            "bottom-right",
+        ] = "top-left",
+    ):
+        """
+        Create an Altair line plot from time series data with optional recession bars overlay.
 
-    return chart
+        Parameters:
+        -----------
+        data : pd.DataFrame
+            Time series data with DateTime index and columns for each time series to plot.
+        series_colors : dict[str,str]
+            Dictionary mapping series names to their desired colors.
+        y_tick_min : int|float
+            Minimum value for y-axis ticks.
+        y_tick_max : int|float
+            Maximum value for y-axis ticks.
+        y_tick_step : int|float
+            Step size between y-axis ticks.
+        date_format : str, optional
+            Format string for x-axis date labels. Default: "%Y" (year only).
+        title : str, optional
+            Chart title. Default: "" (no title).
+        title_font_size : int, optional
+            Font size for chart title in pixels. Default: 24.
+        x_axis_title : str|None, optional
+            X-axis title. If None, no title is shown.
+        y_axis_title : str|None, optional
+            Y-axis title. If None, no title is shown.
+        axis_title_font_size : int, optional
+            Font size for axis titles in pixels. Default: 20.
+        tick_font_size : int, optional
+            Font size for axis tick labels in pixels. Default: 18.
+        x_ticks_angle : int, optional
+            Rotation angle for x-axis tick labels in degrees. Default: 0.
+        width : int, optional
+            Chart width in pixels. Default: 800.
+        height : int, optional
+            Chart height in pixels. Default: 400.
+        legend_box_orient : Literal["none", "left", "right", "top", "bottom", "top-left", "top-right", "bottom-left", "bottom-right"], optional
+            Position of the legend box in the plot. Default: "top-left".
+
+        Returns:
+        --------
+        alt.Chart
+            An Altair chart object containing the line plot with specified customizations.
+
+        Notes:
+        ------
+        - The function automatically adds a horizontal line at y=0 if the y-axis range includes both
+        positive and negative values.
+        - If a FRED API key is provided, gray bars indicating recession periods will be overlaid on the plot.
+        - Y-axis gridlines are dashed and dark gray, while x-axis gridlines are disabled.
+        - The chart clips any marks that fall outside the specified scale domain.
+        """
+
+        _df = self.elicit_date_column(data)
+        START_DATE = _df["date"].iat[0]
+        END_DATE = _df["date"].iat[-1]
+
+        # Melt the DataFrame for Altair's long format
+        df_melted = _df.melt(id_vars=["date"], var_name="Series", value_name="Value")
+
+        # Customize the x-axis
+        alt_x = alt.X(
+            "date:T",
+            axis=alt.Axis(
+                title=x_axis_title,
+                titleFontSize=axis_title_font_size,
+                format=date_format,
+                labelFontSize=tick_font_size,
+                labelAngle=x_ticks_angle,
+            ),
+            scale=alt.Scale(nice=True),
+        )
+
+        # Customize the y-axis
+        yticks = list(range(y_tick_min, y_tick_max + y_tick_step, y_tick_step))
+        alt_y = alt.Y(
+            "Value:Q",
+            scale=alt.Scale(domain=[yticks[0], yticks[-1]]),
+            axis=alt.Axis(
+                values=yticks,
+                title=y_axis_title,
+                titleFontSize=axis_title_font_size,
+                labelFontSize=tick_font_size,
+                titleAnchor="start",  # Puts y-axis title in bottom left corner of plot
+                titleAngle=0,  # Makes y-axis title horizontal
+                titleY=-10,  # Moves y-axis title up to the upper left corner of plot
+            ),
+        )
+
+        # Customize series legend
+        alt_legend = alt.Legend(
+            title=None,
+            labelFontSize=axis_title_font_size,
+            offset=3,  # Offset in pixels by which to displace the legend from the data rectangle and axes.
+            symbolSize=300,  # Length of the variable’s stroke in the legend
+            symbolStrokeWidth=20,  # Width of the variable’s stroke in the legend
+            orient=legend_box_orient,  # Position of legend box in plot
+            labelLimit=0,  # Ensures labels are not truncated
+            strokeColor="black",  # Color of border around the legend
+            fillColor="white",  # Background color of the legend box
+        )
+
+        # Series colors and series legend
+        series_names = list(series_colors.keys())
+        series_colors = list(series_colors.values())
+        alt_scale = alt.Scale(domain=series_names, range=series_colors)
+        alt_color = alt.Color("Series:N", scale=alt_scale, legend=alt_legend)
+
+        # Make chart
+        # clip=True: Clip any marks (e.g. lines or points) falling outside specified scale domain
+        chart = (
+            alt.Chart(df_melted)
+            .mark_line(size=4, clip=True)
+            .encode(x=alt_x, y=alt_y, color=alt_color)
+        )
+
+        if self.fred_api_key:
+            recession_bars_plot = self.make_recession_bars_plot(
+                start_date=START_DATE, end_date=END_DATE
+            )
+
+            chart += recession_bars_plot
+
+        if any([y < 0 for y in yticks]):
+            black_hline_plot = self.make_zero_hline_plot(yticks)
+            chart += black_hline_plot
+
+        # Customize plot title
+        alt_title = alt.TitleParams(text=title, fontSize=title_font_size)
+
+        chart = (
+            chart.properties(width=width, height=height, title=alt_title)
+            .configure_axisX(grid=False)
+            .configure_axisY(gridDash=[2, 2], gridColor="darkgray")
+        )
+
+        return chart
 
 
 if __name__ == "__main__":
