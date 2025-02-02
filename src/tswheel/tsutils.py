@@ -3,6 +3,8 @@
 import pandas as pd
 from typing import Literal
 
+pd.set_option("mode.copy_on_write", True)
+
 
 def annualized_pct_change(
     series: pd.Series,
