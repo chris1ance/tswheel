@@ -415,6 +415,17 @@ class LinePlotter:
         x_ticks_angle: int = 0,
         width: int = 800,
         height: int = 400,
+        legend_box_orient: Literal[
+            "none",
+            "left",
+            "right",
+            "top",
+            "bottom",
+            "top-left",
+            "top-right",
+            "bottom-left",
+            "bottom-right",
+        ] = "top-left",
     ):
         """
         Create an Altair chart displaying the median with percentile ranges as an area.
@@ -505,7 +516,9 @@ class LinePlotter:
         )
 
         # Create DataFrame for the median line
-        median_data = pd.DataFrame({"date": _df["date"], "median": median})
+        median_data = pd.DataFrame(
+            {"date": _df["date"], "Series": "Median", "median": median}
+        )
 
         # Customize the x-axis
         alt_x = alt.X(
@@ -533,6 +546,25 @@ class LinePlotter:
             titleY=-10,  # Moves y-axis title up to the upper left corner of plot
         )
 
+        # Customize series legend
+        alt_legend = alt.Legend(
+            title=None,
+            labelFontSize=axis_title_font_size,
+            offset=3,  # Offset in pixels by which to displace the legend from the data rectangle and axes.
+            symbolSize=300,  # Length of the variable’s stroke in the legend
+            symbolStrokeWidth=20,  # Width of the variable’s stroke in the legend
+            orient=legend_box_orient,  # Position of legend box in plot
+            labelLimit=0,  # Ensures labels are not truncated
+            strokeColor="black",  # Color of border around the legend
+            fillColor="white",  # Background color of the legend box
+        )
+
+        # Series colors and series legend
+        series_names = ["Median"]
+        series_colors = [median_color]
+        alt_scale = alt.Scale(domain=series_names, range=series_colors)
+        alt_color = alt.Color("Series:N", scale=alt_scale, legend=alt_legend)
+
         # Create the area chart
         area_chart = (
             alt.Chart(area_data)
@@ -547,8 +579,12 @@ class LinePlotter:
         # Create the median line chart
         median_chart = (
             alt.Chart(median_data)
-            .mark_line(size=4, color=median_color)
-            .encode(x=alt_x, y=alt.Y("median:Q", scale=alt_y_scale, axis=alt_y_axis))
+            .mark_line(size=4)
+            .encode(
+                x=alt_x,
+                y=alt.Y("median:Q", scale=alt_y_scale, axis=alt_y_axis),
+                color=alt_color,
+            )
         )
 
         # Combine the area and line charts
