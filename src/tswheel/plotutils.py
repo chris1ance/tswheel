@@ -512,12 +512,17 @@ class LinePlotter:
                 "date": _df["date"],
                 "lower": lower_percentile,
                 "upper": upper_percentile,
+                "Series": "Percentile",
             }
         )
 
         # Create DataFrame for the median line
         median_data = pd.DataFrame(
-            {"date": _df["date"], "Series": "Median", "median": median}
+            {
+                "date": _df["date"],
+                "median": median,
+                "Series": "Median",
+            }
         )
 
         # Customize the x-axis
@@ -546,25 +551,6 @@ class LinePlotter:
             titleY=-10,  # Moves y-axis title up to the upper left corner of plot
         )
 
-        # Customize series legend
-        alt_legend = alt.Legend(
-            title=None,
-            labelFontSize=axis_title_font_size,
-            offset=3,  # Offset in pixels by which to displace the legend from the data rectangle and axes.
-            symbolSize=300,  # Length of the variable’s stroke in the legend
-            symbolStrokeWidth=20,  # Width of the variable’s stroke in the legend
-            orient=legend_box_orient,  # Position of legend box in plot
-            labelLimit=0,  # Ensures labels are not truncated
-            strokeColor="black",  # Color of border around the legend
-            fillColor="white",  # Background color of the legend box
-        )
-
-        # Series colors and series legend
-        series_names = ["Median"]
-        series_colors = [median_color]
-        alt_scale = alt.Scale(domain=series_names, range=series_colors)
-        alt_color = alt.Color("Series:N", scale=alt_scale, legend=alt_legend)
-
         # Create the area chart
         area_chart = (
             alt.Chart(area_data)
@@ -573,22 +559,30 @@ class LinePlotter:
                 x=alt_x,
                 y=alt.Y("lower:Q", scale=alt_y_scale, axis=alt_y_axis),
                 y2="upper:Q",
+                color=alt.Color(
+                    "Series:N",
+                    scale=alt.Scale(range=[area_color]),
+                    legend=alt.Legend(symbolType="square"),
+                ),
             )
         )
 
-        # Create the median line chart
         median_chart = (
             alt.Chart(median_data)
             .mark_line(size=4)
             .encode(
                 x=alt_x,
                 y=alt.Y("median:Q", scale=alt_y_scale, axis=alt_y_axis),
-                color=alt_color,
+                color=alt.Color(
+                    "Series:N",
+                    scale=alt.Scale(range=[median_color]),
+                    legend=alt.Legend(symbolType="stroke"),
+                ),
             )
         )
 
         # Combine the area and line charts
-        chart = area_chart + median_chart
+        chart = (area_chart + median_chart).resolve_scale(color="independent")
 
         if self.fred_api_key:
             recession_bars_plot = self.make_recession_bars_plot(
