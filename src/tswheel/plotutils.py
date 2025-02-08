@@ -217,7 +217,7 @@ class LinePlotter:
                 _df.index.name and _df.index.name.lower() != "date"
             ):
                 _df.index.name = "date"
-            _df = df.reset_index()
+            _df = _df.reset_index()
 
         # Handle Period column
         elif "date" in _df:
@@ -379,6 +379,185 @@ class LinePlotter:
                 start_date=START_DATE, end_date=END_DATE
             )
 
+            chart += recession_bars_plot
+
+        if any([y < 0 for y in yticks]):
+            black_hline_plot = self.make_zero_hline_plot(yticks)
+            chart += black_hline_plot
+
+        # Customize plot title
+        alt_title = alt.TitleParams(text=title, fontSize=title_font_size)
+
+        chart = (
+            chart.properties(width=width, height=height, title=alt_title)
+            .configure_axisX(grid=False)
+            .configure_axisY(gridDash=[2, 2], gridColor="darkgray")
+        )
+
+        return chart
+
+    def make_percentile_area_chart(
+        self,
+        data: pd.DataFrame,
+        median_color: str,
+        area_color: str,
+        y_tick_min: int | float,
+        y_tick_max: int | float,
+        y_tick_step: int | float,
+        percentile_type: Literal["25_75", "10_90", "min_max"] = "25_75",
+        date_format: str = "%Y",
+        title: str = "",
+        title_font_size: int = 24,
+        x_axis_title: str | None = None,
+        y_axis_title: str | None = None,
+        axis_title_font_size: int = 20,
+        tick_font_size: int = 18,
+        x_ticks_angle: int = 0,
+        width: int = 800,
+        height: int = 400,
+    ):
+        """
+        Create an Altair chart displaying the median with percentile ranges as an area.
+
+        Parameters:
+        -----------
+        data : pd.DataFrame
+            Time series data with DateTime index and a single column for the time series.
+        median_color : str
+            Color for the median line.
+        area_color : str
+            Color for the percentile area.
+        y_tick_min : int|float
+            Minimum value for y-axis ticks.
+        y_tick_max : int|float
+            Maximum value for y-axis ticks.
+        y_tick_step : int|float
+            Step size between y-axis ticks.
+        percentile_type : Literal["25_75", "10_90", "min_max"], optional
+            Type of percentile range to display.
+            "25_75": 25th to 75th percentile.
+            "10_90": 10th to 90th percentile.
+            "min_max": Minimum to Maximum values.
+            Default: "25_75".
+        date_format : str, optional
+            Format string for x-axis date labels. Default: "%Y" (year only).
+        title : str, optional
+            Chart title. Default: "" (no title).
+        title_font_size : int, optional
+            Font size for chart title in pixels. Default: 24.
+        x_axis_title : str|None, optional
+            X-axis title. If None, no title is shown.
+        y_axis_title : str|None, optional
+            Y-axis title. If None, no title is shown.
+        axis_title_font_size : int, optional
+            Font size for axis titles in pixels. Default: 20.
+        tick_font_size : int, optional
+            Font size for axis tick labels in pixels. Default: 18.
+        x_ticks_angle : int, optional
+            Rotation angle for x-axis tick labels in degrees. Default: 0.
+        width : int, optional
+            Chart width in pixels. Default: 800.
+        height : int, optional
+            Chart height in pixels. Default: 400.
+
+        Returns:
+        --------
+        alt.Chart
+            An Altair chart object containing the percentile area plot with specified customizations.
+
+        Notes:
+        ------
+        - The function automatically adds a horizontal line at y=0 if the y-axis range includes both
+          positive and negative values.
+        - If a FRED API key is provided, gray bars indicating recession periods will be overlaid on the plot.
+        - Y-axis gridlines are dashed and dark gray, while x-axis gridlines are disabled.
+        - The chart clips any marks that fall outside the specified scale domain.
+        """
+
+        _df = self.elicit_date_column(data)
+        START_DATE = _df["date"].iat[0]
+        END_DATE = _df["date"].iat[-1]
+
+        # Calculate percentiles across columns
+        if percentile_type == "25_75":
+            lower_percentile = _df.drop(columns=["date"]).quantile(0.25, axis=1)
+            upper_percentile = _df.drop(columns=["date"]).quantile(0.75, axis=1)
+        elif percentile_type == "10_90":
+            lower_percentile = _df.drop(columns=["date"]).quantile(0.10, axis=1)
+            upper_percentile = _df.drop(columns=["date"]).quantile(0.90, axis=1)
+        elif percentile_type == "min_max":
+            lower_percentile = _df.drop(columns=["date"]).min(axis=1)
+            upper_percentile = _df.drop(columns=["date"]).max(axis=1)
+        else:
+            raise ValueError(
+                "Invalid percentile_type. Must be '25_75', '10_90', or 'min_max'."
+            )
+
+        median = _df.drop(columns=["date"]).median(axis=1)
+
+        # Create DataFrame for the area
+        area_data = pd.DataFrame(
+            {
+                "date": _df["date"],
+                "lower": lower_percentile,
+                "upper": upper_percentile,
+            }
+        )
+
+        # Create DataFrame for the median line
+        median_data = pd.DataFrame({"date": _df["date"], "median": median})
+
+        # Customize the x-axis
+        alt_x = alt.X(
+            "date:T",
+            axis=alt.Axis(
+                title=x_axis_title,
+                titleFontSize=axis_title_font_size,
+                format=date_format,
+                labelFontSize=tick_font_size,
+                labelAngle=x_ticks_angle,
+            ),
+            scale=alt.Scale(nice=True),
+        )
+
+        # Customize the y-axis
+        yticks = list(range(y_tick_min, y_tick_max + y_tick_step, y_tick_step))
+        alt_y_scale = alt.Scale(domain=[yticks[0], yticks[-1]])
+        alt_y_axis = alt.Axis(
+            values=yticks,
+            title=y_axis_title,
+            titleFontSize=axis_title_font_size,
+            labelFontSize=tick_font_size,
+            titleAnchor="start",  # Puts y-axis title in bottom left corner of plot
+            titleAngle=0,  # Makes y-axis title horizontal
+            titleY=-10,  # Moves y-axis title up to the upper left corner of plot
+        )
+
+        # Create the area chart
+        area_chart = (
+            alt.Chart(area_data)
+            .mark_area(opacity=0.3, color=area_color)
+            .encode(
+                x=alt_x,
+                y=alt.Y("lower:Q", scale=alt_y_scale, axis=alt_y_axis),
+                y2="upper:Q",
+            )
+        )
+
+        # Create the median line chart
+        median_chart = (
+            alt.Chart(median_data)
+            .mark_line(size=4, color=median_color)
+            .encode(x=alt_x, y=alt.Y("median:Q", scale=alt_y_scale, axis=alt_y_axis))
+        )
+
+        # Combine the area and line charts
+        chart = area_chart + median_chart
+
+        if self.fred_api_key:
+            recession_bars_plot = self.make_recession_bars_plot(
+                start_date=START_DATE, end_date=END_DATE
+            )
             chart += recession_bars_plot
 
         if any([y < 0 for y in yticks]):
