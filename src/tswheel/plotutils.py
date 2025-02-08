@@ -507,12 +507,21 @@ class LinePlotter:
         median = _df.drop(columns=["date"]).median(axis=1)
 
         # Create DataFrame for the area
+        series = (
+            "Min/Max"
+            if percentile_type == "min_max"
+            else (
+                "25th/75th Percentiles"
+                if percentile_type == "25_75"
+                else "10th/90th Percentiles"
+            )
+        )
         area_data = pd.DataFrame(
             {
                 "date": _df["date"],
                 "lower": lower_percentile,
                 "upper": upper_percentile,
-                "Series": "Percentile",
+                "Series": series,
             }
         )
 
@@ -552,6 +561,18 @@ class LinePlotter:
         )
 
         # Create the area chart
+        alt_area_legend = alt.Legend(
+            title=None,
+            labelFontSize=axis_title_font_size,
+            offset=3,  # Offset in pixels by which to displace the legend from the data rectangle and axes.
+            symbolSize=300,  # Length of the variable’s stroke in the legend
+            symbolStrokeWidth=5,  # Width of the variable’s stroke in the legend
+            orient=legend_box_orient,  # Position of legend box in plot
+            labelLimit=0,  # Ensures labels are not truncated
+            fillColor="white",  # Background color of the legend box
+            symbolType="square",  # Shape of the legend symbol
+        )
+
         area_chart = (
             alt.Chart(area_data)
             .mark_area(opacity=0.3, color=area_color)
@@ -562,9 +583,22 @@ class LinePlotter:
                 color=alt.Color(
                     "Series:N",
                     scale=alt.Scale(range=[area_color]),
-                    legend=alt.Legend(symbolType="square"),
+                    legend=alt_area_legend,
                 ),
             )
+        )
+
+        # Create the line chart
+        alt_line_legend = alt.Legend(
+            title=None,
+            labelFontSize=axis_title_font_size,
+            offset=3,  # Offset in pixels by which to displace the legend from the data rectangle and axes.
+            symbolSize=300,  # Length of the variable’s stroke in the legend
+            symbolStrokeWidth=5,  # Width of the variable’s stroke in the legend
+            orient=legend_box_orient,  # Position of legend box in plot
+            labelLimit=0,  # Ensures labels are not truncated
+            fillColor="white",  # Background color of the legend box
+            symbolType="stroke",  # Shape of the legend symbol
         )
 
         median_chart = (
@@ -576,13 +610,13 @@ class LinePlotter:
                 color=alt.Color(
                     "Series:N",
                     scale=alt.Scale(range=[median_color]),
-                    legend=alt.Legend(symbolType="stroke"),
+                    legend=alt_line_legend,
                 ),
             )
         )
 
         # Combine the area and line charts
-        chart = (area_chart + median_chart).resolve_scale(color="independent")
+        chart = (median_chart + area_chart).resolve_scale(color="independent")
 
         if self.fred_api_key:
             recession_bars_plot = self.make_recession_bars_plot(
