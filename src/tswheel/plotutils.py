@@ -258,6 +258,7 @@ class LinePlotter:
             "bottom-left",
             "bottom-right",
         ] = "top-left",
+        configure_axes: bool = True,
     ):
         """
         Create an Altair line plot from time series data with optional recession bars overlay.
@@ -388,11 +389,12 @@ class LinePlotter:
         # Customize plot title
         alt_title = alt.TitleParams(text=title, fontSize=title_font_size)
 
-        chart = (
-            chart.properties(width=width, height=height, title=alt_title)
-            .configure_axisX(grid=False)
-            .configure_axisY(gridDash=[2, 2], gridColor="darkgray")
-        )
+        chart = chart.properties(width=width, height=height, title=alt_title)
+
+        if configure_axes:
+            chart = chart.configure_axisX(grid=False).configure_axisY(
+                gridDash=[2, 2], gridColor="darkgray"
+            )
 
         return chart
 
@@ -426,6 +428,7 @@ class LinePlotter:
             "bottom-left",
             "bottom-right",
         ] = "top-left",
+        configure_axes: bool = True,
     ):
         """
         Create an Altair chart displaying the median with percentile ranges as an area.
@@ -631,11 +634,12 @@ class LinePlotter:
         # Customize plot title
         alt_title = alt.TitleParams(text=title, fontSize=title_font_size)
 
-        chart = (
-            chart.properties(width=width, height=height, title=alt_title)
-            .configure_axisX(grid=False)
-            .configure_axisY(gridDash=[2, 2], gridColor="darkgray")
-        )
+        chart = chart.properties(width=width, height=height, title=alt_title)
+
+        if configure_axes:
+            chart = chart.configure_axisX(grid=False).configure_axisY(
+                gridDash=[2, 2], gridColor="darkgray"
+            )
 
         return chart
 
