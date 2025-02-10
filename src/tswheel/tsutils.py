@@ -85,7 +85,10 @@ def annualized_pct_change(
 
     transformed_series = (
         series.copy()
-        .pct_change(periods=n, fill_method=None)
+        .pct_change(
+            periods=n, fill_method=None
+        )  # = (series_t/series_{t-n})^(periods_per_year/n) - 1
+        .add(1)
         .pow(annual_periods / n)
         .sub(1)
         .mul(100)
