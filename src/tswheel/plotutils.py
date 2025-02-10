@@ -10,12 +10,47 @@ pd.set_option("mode.copy_on_write", True)
 
 
 class LinePlotter:
-    def __init__(self, fred_api_key: str | None = None):
+    def __init__(
+        self,
+        fred_api_key: str | None = None,
+        date_format: str = "%Y",
+        title: str = "",
+        title_font_size: int = 24,
+        x_axis_title: str | None = None,
+        y_axis_title: str | None = None,
+        axis_title_font_size: int = 20,
+        tick_font_size: int = 18,
+        x_ticks_angle: int = 0,
+        width: int = 800,
+        height: int = 400,
+        legend_box_orient: Literal[
+            "none",
+            "left",
+            "right",
+            "top",
+            "bottom",
+            "top-left",
+            "top-right",
+            "bottom-left",
+            "bottom-right",
+        ] = "top-left",
+    ):
         self.fred_api_key = fred_api_key
+        self.date_format = date_format
+        self.title = title
+        self.title_font_size = title_font_size
+        self.x_axis_title = x_axis_title
+        self.y_axis_title = y_axis_title
+        self.axis_title_font_size = axis_title_font_size
+        self.tick_font_size = tick_font_size
+        self.x_ticks_angle = x_ticks_angle
+        self.width = width
+        self.height = height
+        self.legend_box_orient = legend_box_orient
         self.recession_bars_plot = None
 
     @lru_cache(maxsize=None)
-    def get_recession_periods(
+    def get_recessions(
         self,
         start_date: str | None = None,
         end_date: str | None = None,
@@ -131,14 +166,14 @@ class LinePlotter:
         to visually indicate recession periods. The bars have 40% opacity
         and can be layered with other charts using the + operator.
         """
-        recession_spans = self.get_recession_periods(
+        recessions = self.get_recessions(
             start_date=start_date,
             end_date=end_date,
             nber_based=nber_based,
         )
 
         recession_bars_plot = (
-            alt.Chart(recession_spans)
+            alt.Chart(recessions)
             .mark_rect(opacity=0.4, color="gray")
             .encode(x="start:T", x2="end:T")
         )
@@ -237,28 +272,7 @@ class LinePlotter:
         y_tick_min: int | float,
         y_tick_max: int | float,
         y_tick_step: int | float,
-        date_format: str = "%Y",
-        title: str = "",
-        title_font_size: int = 24,
-        x_axis_title: str | None = None,
-        y_axis_title: str | None = None,
-        axis_title_font_size: int = 20,
-        tick_font_size: int = 18,
-        x_ticks_angle: int = 0,
-        width: int = 800,
-        height: int = 400,
-        legend_box_orient: Literal[
-            "none",
-            "left",
-            "right",
-            "top",
-            "bottom",
-            "top-left",
-            "top-right",
-            "bottom-left",
-            "bottom-right",
-        ] = "top-left",
-        configure_axes: bool = True,
+        add_legend_border: bool = True,
     ):
         """
         Create an Altair line plot from time series data with optional recession bars overlay.
@@ -275,28 +289,6 @@ class LinePlotter:
             Maximum value for y-axis ticks.
         y_tick_step : int|float
             Step size between y-axis ticks.
-        date_format : str, optional
-            Format string for x-axis date labels. Default: "%Y" (year only).
-        title : str, optional
-            Chart title. Default: "" (no title).
-        title_font_size : int, optional
-            Font size for chart title in pixels. Default: 24.
-        x_axis_title : str|None, optional
-            X-axis title. If None, no title is shown.
-        y_axis_title : str|None, optional
-            Y-axis title. If None, no title is shown.
-        axis_title_font_size : int, optional
-            Font size for axis titles in pixels. Default: 20.
-        tick_font_size : int, optional
-            Font size for axis tick labels in pixels. Default: 18.
-        x_ticks_angle : int, optional
-            Rotation angle for x-axis tick labels in degrees. Default: 0.
-        width : int, optional
-            Chart width in pixels. Default: 800.
-        height : int, optional
-            Chart height in pixels. Default: 400.
-        legend_box_orient : Literal["none", "left", "right", "top", "bottom", "top-left", "top-right", "bottom-left", "bottom-right"], optional
-            Position of the legend box in the plot. Default: "top-left".
 
         Returns:
         --------
@@ -323,11 +315,12 @@ class LinePlotter:
         alt_x = alt.X(
             "date:T",
             axis=alt.Axis(
-                title=x_axis_title,
-                titleFontSize=axis_title_font_size,
-                format=date_format,
-                labelFontSize=tick_font_size,
-                labelAngle=x_ticks_angle,
+                title=self.x_axis_title,
+                titleFontSize=self.axis_title_font_size,
+                format=self.date_format,
+                labelFontSize=self.tick_font_size,
+                labelAngle=self.x_ticks_angle,
+                grid=False,
             ),
             scale=alt.Scale(nice=True),
         )
@@ -339,26 +332,31 @@ class LinePlotter:
             scale=alt.Scale(domain=[yticks[0], yticks[-1]]),
             axis=alt.Axis(
                 values=yticks,
-                title=y_axis_title,
-                titleFontSize=axis_title_font_size,
-                labelFontSize=tick_font_size,
+                title=self.y_axis_title,
+                titleFontSize=self.axis_title_font_size,
+                labelFontSize=self.tick_font_size,
                 titleAnchor="start",  # Puts y-axis title in bottom left corner of plot
                 titleAngle=0,  # Makes y-axis title horizontal
                 titleY=-10,  # Moves y-axis title up to the upper left corner of plot
+                gridDash=[2, 2],
+                gridColor="darkgray",
             ),
         )
 
         # Customize series legend
         alt_legend = alt.Legend(
             title=None,
-            labelFontSize=axis_title_font_size,
-            offset=3,  # Offset in pixels by which to displace the legend from the data rectangle and axes.
+            labelFontSize=self.axis_title_font_size,
+            offset=1,  # Offset in pixels by which to displace the legend from the data rectangle and axes.
             symbolSize=300,  # Length of the variable’s stroke in the legend
-            symbolStrokeWidth=20,  # Width of the variable’s stroke in the legend
-            orient=legend_box_orient,  # Position of legend box in plot
+            symbolStrokeWidth=10,  # Width of the variable’s stroke in the legend
+            orient=self.legend_box_orient,  # Position of legend box in plot
             labelLimit=0,  # Ensures labels are not truncated
-            strokeColor="black",  # Color of border around the legend
+            strokeColor="black"
+            if add_legend_border
+            else None,  # Color of border around the legend
             fillColor="white",  # Background color of the legend box
+            symbolType="stroke",  # Shape of the legend symbol
         )
 
         # Series colors and series legend
@@ -387,48 +385,20 @@ class LinePlotter:
             chart += black_hline_plot
 
         # Customize plot title
-        alt_title = alt.TitleParams(text=title, fontSize=title_font_size)
-
-        chart = chart.properties(width=width, height=height, title=alt_title)
-
-        if configure_axes:
-            chart = chart.configure_axisX(grid=False).configure_axisY(
-                gridDash=[2, 2], gridColor="darkgray"
-            )
+        alt_title = alt.TitleParams(text=self.title, fontSize=self.title_font_size)
+        chart = chart.properties(width=self.width, height=self.height, title=alt_title)
 
         return chart
 
     def make_percentile_area_chart(
         self,
         data: pd.DataFrame,
-        median_color: str,
         area_color: str,
         y_tick_min: int | float,
         y_tick_max: int | float,
         y_tick_step: int | float,
         percentile_type: Literal["25_75", "10_90", "min_max"] = "25_75",
-        date_format: str = "%Y",
-        title: str = "",
-        title_font_size: int = 24,
-        x_axis_title: str | None = None,
-        y_axis_title: str | None = None,
-        axis_title_font_size: int = 20,
-        tick_font_size: int = 18,
-        x_ticks_angle: int = 0,
-        width: int = 800,
-        height: int = 400,
-        legend_box_orient: Literal[
-            "none",
-            "left",
-            "right",
-            "top",
-            "bottom",
-            "top-left",
-            "top-right",
-            "bottom-left",
-            "bottom-right",
-        ] = "top-left",
-        configure_axes: bool = True,
+        base_chart: alt.Chart | None = None,
     ):
         """
         Create an Altair chart displaying the median with percentile ranges as an area.
@@ -453,26 +423,6 @@ class LinePlotter:
             "10_90": 10th to 90th percentile.
             "min_max": Minimum to Maximum values.
             Default: "25_75".
-        date_format : str, optional
-            Format string for x-axis date labels. Default: "%Y" (year only).
-        title : str, optional
-            Chart title. Default: "" (no title).
-        title_font_size : int, optional
-            Font size for chart title in pixels. Default: 24.
-        x_axis_title : str|None, optional
-            X-axis title. If None, no title is shown.
-        y_axis_title : str|None, optional
-            Y-axis title. If None, no title is shown.
-        axis_title_font_size : int, optional
-            Font size for axis titles in pixels. Default: 20.
-        tick_font_size : int, optional
-            Font size for axis tick labels in pixels. Default: 18.
-        x_ticks_angle : int, optional
-            Rotation angle for x-axis tick labels in degrees. Default: 0.
-        width : int, optional
-            Chart width in pixels. Default: 800.
-        height : int, optional
-            Chart height in pixels. Default: 400.
 
         Returns:
         --------
@@ -489,8 +439,6 @@ class LinePlotter:
         """
 
         _df = self.elicit_date_column(data)
-        START_DATE = _df["date"].iat[0]
-        END_DATE = _df["date"].iat[-1]
 
         # Calculate percentiles across columns
         if percentile_type == "25_75":
@@ -506,8 +454,6 @@ class LinePlotter:
             raise ValueError(
                 "Invalid percentile_type. Must be '25_75', '10_90', or 'min_max'."
             )
-
-        median = _df.drop(columns=["date"]).median(axis=1)
 
         # Create DataFrame for the area
         series = (
@@ -528,24 +474,16 @@ class LinePlotter:
             }
         )
 
-        # Create DataFrame for the median line
-        median_data = pd.DataFrame(
-            {
-                "date": _df["date"],
-                "median": median,
-                "Series": "Median",
-            }
-        )
-
         # Customize the x-axis
         alt_x = alt.X(
             "date:T",
             axis=alt.Axis(
-                title=x_axis_title,
-                titleFontSize=axis_title_font_size,
-                format=date_format,
-                labelFontSize=tick_font_size,
-                labelAngle=x_ticks_angle,
+                title=self.x_axis_title,
+                titleFontSize=self.axis_title_font_size,
+                format=self.date_format,
+                labelFontSize=self.tick_font_size,
+                labelAngle=self.x_ticks_angle,
+                grid=False,
             ),
             scale=alt.Scale(nice=True),
         )
@@ -555,22 +493,24 @@ class LinePlotter:
         alt_y_scale = alt.Scale(domain=[yticks[0], yticks[-1]])
         alt_y_axis = alt.Axis(
             values=yticks,
-            title=y_axis_title,
-            titleFontSize=axis_title_font_size,
-            labelFontSize=tick_font_size,
+            title=self.y_axis_title,
+            titleFontSize=self.axis_title_font_size,
+            labelFontSize=self.tick_font_size,
             titleAnchor="start",  # Puts y-axis title in bottom left corner of plot
             titleAngle=0,  # Makes y-axis title horizontal
             titleY=-10,  # Moves y-axis title up to the upper left corner of plot
+            gridDash=[2, 2],
+            gridColor="darkgray",
         )
 
         # Create the area chart
         alt_area_legend = alt.Legend(
             title=None,
-            labelFontSize=axis_title_font_size,
-            offset=3,  # Offset in pixels by which to displace the legend from the data rectangle and axes.
+            labelFontSize=self.axis_title_font_size,
+            offset=1,  # Offset in pixels by which to displace the legend from the data rectangle and axes.
             symbolSize=300,  # Length of the variable’s stroke in the legend
             symbolStrokeWidth=5,  # Width of the variable’s stroke in the legend
-            orient=legend_box_orient,  # Position of legend box in plot
+            orient=self.legend_box_orient,  # Position of legend box in plot
             labelLimit=0,  # Ensures labels are not truncated
             fillColor="white",  # Background color of the legend box
             symbolType="square",  # Shape of the legend symbol
@@ -578,7 +518,9 @@ class LinePlotter:
 
         area_chart = (
             alt.Chart(area_data)
-            .mark_area(opacity=0.3, color=area_color)
+            .mark_area(
+                opacity=0.3 if percentile_type == "25_75" else 0.15, color=area_color
+            )
             .encode(
                 x=alt_x,
                 y=alt.Y("lower:Q", scale=alt_y_scale, axis=alt_y_axis),
@@ -591,57 +533,13 @@ class LinePlotter:
             )
         )
 
-        # Create the line chart
-        alt_line_legend = alt.Legend(
-            title=None,
-            labelFontSize=axis_title_font_size,
-            offset=3,  # Offset in pixels by which to displace the legend from the data rectangle and axes.
-            symbolSize=300,  # Length of the variable’s stroke in the legend
-            symbolStrokeWidth=5,  # Width of the variable’s stroke in the legend
-            orient=legend_box_orient,  # Position of legend box in plot
-            labelLimit=0,  # Ensures labels are not truncated
-            fillColor="white",  # Background color of the legend box
-            symbolType="stroke",  # Shape of the legend symbol
-        )
+        area_chart = area_chart.properties(width=self.width, height=self.height)
 
-        median_chart = (
-            alt.Chart(median_data)
-            .mark_line(size=4)
-            .encode(
-                x=alt_x,
-                y=alt.Y("median:Q", scale=alt_y_scale, axis=alt_y_axis),
-                color=alt.Color(
-                    "Series:N",
-                    scale=alt.Scale(range=[median_color]),
-                    legend=alt_line_legend,
-                ),
-            )
-        )
-
-        # Combine the area and line charts
-        chart = (median_chart + area_chart).resolve_scale(color="independent")
-
-        if self.fred_api_key:
-            recession_bars_plot = self.make_recession_bars_plot(
-                start_date=START_DATE, end_date=END_DATE
-            )
-            chart += recession_bars_plot
-
-        if any([y < 0 for y in yticks]):
-            black_hline_plot = self.make_zero_hline_plot(yticks)
-            chart += black_hline_plot
-
-        # Customize plot title
-        alt_title = alt.TitleParams(text=title, fontSize=title_font_size)
-
-        chart = chart.properties(width=width, height=height, title=alt_title)
-
-        if configure_axes:
-            chart = chart.configure_axisX(grid=False).configure_axisY(
-                gridDash=[2, 2], gridColor="darkgray"
-            )
-
-        return chart
+        if base_chart:
+            chart = (base_chart + area_chart).resolve_scale(color="independent")
+            return chart
+        else:
+            return area_chart
 
 
 if __name__ == "__main__":
