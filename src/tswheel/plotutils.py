@@ -10,6 +10,18 @@ pd.set_option("mode.copy_on_write", True)
 
 
 class LinePlotter:
+    LEGEND_BOX_ORIENTATIONS = [
+        "none",
+        "left",
+        "right",
+        "top",
+        "bottom",
+        "top-left",
+        "top-right",
+        "bottom-left",
+        "bottom-right",
+    ]
+
     def __init__(
         self,
         fred_api_key: str | None = None,
@@ -23,17 +35,7 @@ class LinePlotter:
         x_ticks_angle: int = 0,
         width: int = 800,
         height: int = 400,
-        legend_box_orient: Literal[
-            "none",
-            "left",
-            "right",
-            "top",
-            "bottom",
-            "top-left",
-            "top-right",
-            "bottom-left",
-            "bottom-right",
-        ] = "top-left",
+        legend_box_orient: Literal[LEGEND_BOX_ORIENTATIONS] = "top-left",
     ):
         self.fred_api_key = fred_api_key
         self.date_format = date_format
@@ -273,6 +275,7 @@ class LinePlotter:
         y_tick_max: int | float,
         y_tick_step: int | float,
         add_legend_border: bool = True,
+        legend_box_orient: Literal[LEGEND_BOX_ORIENTATIONS] | None = None,
     ):
         """
         Create an Altair line plot from time series data with optional recession bars overlay.
@@ -321,8 +324,9 @@ class LinePlotter:
                 labelFontSize=self.tick_font_size,
                 labelAngle=self.x_ticks_angle,
                 grid=False,
+                labelAlign="center",  # Centers labels under their tick marks
             ),
-            scale=alt.Scale(nice=True),
+            # scale=alt.Scale(nice=True),
         )
 
         # Customize the y-axis
@@ -350,7 +354,9 @@ class LinePlotter:
             offset=1,  # Offset in pixels by which to displace the legend from the data rectangle and axes.
             symbolSize=300,  # Length of the variable’s stroke in the legend
             symbolStrokeWidth=10,  # Width of the variable’s stroke in the legend
-            orient=self.legend_box_orient,  # Position of legend box in plot
+            orient=legend_box_orient
+            if legend_box_orient
+            else self.legend_box_orient,  # Position of legend box in plot
             labelLimit=0,  # Ensures labels are not truncated
             strokeColor="black"
             if add_legend_border
@@ -399,6 +405,7 @@ class LinePlotter:
         y_tick_step: int | float,
         percentile_type: Literal["25_75", "10_90", "min_max"] = "25_75",
         base_chart: alt.Chart | None = None,
+        legend_box_orient: Literal[LEGEND_BOX_ORIENTATIONS] | None = None,
     ):
         """
         Create an Altair chart displaying the median with percentile ranges as an area.
@@ -484,8 +491,8 @@ class LinePlotter:
                 labelFontSize=self.tick_font_size,
                 labelAngle=self.x_ticks_angle,
                 grid=False,
+                labelAlign="center",  # Centers labels under their tick marks
             ),
-            scale=alt.Scale(nice=True),
         )
 
         # Customize the y-axis
@@ -510,7 +517,9 @@ class LinePlotter:
             offset=1,  # Offset in pixels by which to displace the legend from the data rectangle and axes.
             symbolSize=300,  # Length of the variable’s stroke in the legend
             symbolStrokeWidth=5,  # Width of the variable’s stroke in the legend
-            orient=self.legend_box_orient,  # Position of legend box in plot
+            orient=legend_box_orient
+            if legend_box_orient
+            else self.legend_box_orient,  # Position of legend box in plot
             labelLimit=0,  # Ensures labels are not truncated
             fillColor="white",  # Background color of the legend box
             symbolType="square",  # Shape of the legend symbol
