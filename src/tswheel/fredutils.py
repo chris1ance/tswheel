@@ -37,7 +37,7 @@ def get_fred_series(
     api_key: str,
     series: dict[str, str],
     start_date: str | None,
-    end_date: str | None,
+    end_date: str | None = None,
     period_index: bool = False,
 ) -> pd.DataFrame:
     """
