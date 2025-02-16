@@ -1540,6 +1540,15 @@ wheels = [
 ]
 
 [[package]]
+name = "scikit-base"
+version = "0.12.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/5f/ab/d534a45bd81d0e06fe8c6e9766f86bd63b5b37d1574c3cb415c32d512665/scikit_base-0.12.0.tar.gz", hash = "sha256:2f801a149dda944481f327f5b3c6137aa53dc6974d097b086cfbba107034a7fe", size = 118741 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/40/1f/c6418e81e8cce8b7f785d74b154741486ece82e098b1a8053682fa7fd882/scikit_base-0.12.0-py3-none-any.whl", hash = "sha256:a0679305131ac4753ff6ee72877f831bc68597b7884feede0ab4b32ff520e018", size = 141517 },
+]
+
+[[package]]
 name = "scikit-learn"
 version = "1.6.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1634,6 +1643,24 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68a0e064b6af791aa332cf192da575fd474ed7d6f16a2/six-1.17.0.tar.gz", hash = "sha256:ff70335d468e7eb6ec65b95b99d3a2836546063f63acc5171de367e834932a81", size = 34031 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050 },
+]
+
+[[package]]
+name = "sktime"
+version = "0.36.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "joblib" },
+    { name = "numpy" },
+    { name = "packaging" },
+    { name = "pandas" },
+    { name = "scikit-base" },
+    { name = "scikit-learn" },
+    { name = "scipy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/1a/86/59739310ae5650e6116446b9526fae747566069cb0cb5a4592b7ae3742ec/sktime-0.36.0.tar.gz", hash = "sha256:7433b44852e624800978c15c0506f516d7f99947d3baa67e5aeca282ef708674", size = 35927038 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/82/3b/34fa871bc3778b2abb9a780fea97a018d64ab9683e40befabe1930ad7580/sktime-0.36.0-py3-none-any.whl", hash = "sha256:f5941a3575ac7ae8a180bf26405b697b3fe76690d79a6156492a3519f4409e67", size = 36875729 },
 ]
 
 [[package]]
@@ -1787,6 +1814,7 @@ dependencies = [
     { name = "scikit-learn" },
     { name = "scikit-learn-intelex" },
     { name = "seaborn" },
+    { name = "sktime" },
     { name = "statsmodels" },
 ]
 
@@ -1811,6 +1839,7 @@ requires-dist = [
     { name = "scikit-learn", specifier = ">=1.6.0" },
     { name = "scikit-learn-intelex", specifier = ">=2025.0.1" },
     { name = "seaborn", specifier = ">=0.13.2" },
+    { name = "sktime", specifier = ">=0.36.0" },
     { name = "statsmodels", specifier = ">=0.14.4" },
 ]
 
