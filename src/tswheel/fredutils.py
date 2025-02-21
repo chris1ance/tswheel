@@ -2,35 +2,7 @@
 
 from fredapi import Fred
 import pandas as pd
-from datetime import datetime
-
-
-def is_valid_date_format(date_string: str) -> bool:
-    """
-    Validates if a string matches the YYYY-MM-DD date format and represents a valid date.
-
-    Args:
-        date_string (str): The string to validate
-
-    Returns:
-        bool: True if the string is in YYYY-MM-DD format and represents a valid date,
-              False otherwise
-
-    Examples:
-        >>> is_valid_date_format('2024-01-13')
-        True
-        >>> is_valid_date_format('2024-02-30')  # Invalid date
-        False
-        >>> is_valid_date_format('2024/01/13')  # Wrong format
-        False
-        >>> is_valid_date_format('abc')
-        False
-    """
-    try:
-        datetime.strptime(date_string, "%Y-%m-%d")
-        return True
-    except ValueError:
-        return False
+from .datavalidation import is_valid_date_format
 
 
 def get_fred_series(
