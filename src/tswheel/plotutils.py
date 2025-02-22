@@ -255,6 +255,7 @@ class LinePlotter:
         title: str = "",
         x_axis_title: str = "",
         y_axis_title: str = "",
+        legend_title: str = "",
         add_legend_border: bool = True,
         legend_box_orient: Literal[LEGEND_BOX_ORIENTATIONS] = "top-left",
         legend_direction: Literal["horizontal", "vertical"] = "vertical",
@@ -340,7 +341,9 @@ class LinePlotter:
 
         # Customize series legend
         alt_legend = alt.Legend(
-            title=None,
+            title=legend_title,
+            titleFontSize=axis_title_font_size,
+            titleLimit=0,  # Ensures title is not truncated
             labelFontSize=axis_title_font_size,
             offset=1,  # Offset in pixels by which to displace the legend from the data rectangle and axes.
             symbolSize=300,  # Length of the variable’s stroke in the legend
@@ -381,7 +384,9 @@ class LinePlotter:
             chart += black_hline_plot
 
         # Customize plot title
-        alt_title = alt.TitleParams(text=title, fontSize=title_font_size)
+        alt_title = alt.TitleParams(
+            text=title, anchor="middle", fontSize=title_font_size
+        )
         chart = chart.properties(width=width, height=height, title=alt_title)
 
         return chart
