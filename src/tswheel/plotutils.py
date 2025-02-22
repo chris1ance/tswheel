@@ -391,7 +391,7 @@ class LinePlotter:
 
         return chart
 
-    def make_percentile_area_chart(
+    def make_area_chart(
         self,
         data: pd.DataFrame,
         area_color: str,
@@ -399,9 +399,20 @@ class LinePlotter:
         y_tick_max: int | float,
         y_tick_step: int | float,
         title: str = "",
+        x_axis_title: str = "",
+        y_axis_title: str = "",
+        legend_title: str = "",
+        add_legend_border: bool = True,
+        legend_box_orient: Literal[LEGEND_BOX_ORIENTATIONS] = "top-left",
+        legend_direction: Literal["horizontal", "vertical"] = "vertical",
+        date_format: str = "%Y",
+        title_font_size: int = 24,
+        axis_title_font_size: int = 20,
+        tick_font_size: int = 18,
+        x_ticks_angle: int = 0,
+        width: int = 800,
+        height: int = 400,
         percentile_type: Literal["25_75", "10_90", "min_max"] = "25_75",
-        base_chart: alt.Chart | None = None,
-        legend_box_orient: Literal[LEGEND_BOX_ORIENTATIONS] | None = None,
     ):
         """
         Create an Altair chart displaying the median with percentile ranges as an area.
@@ -440,7 +451,6 @@ class LinePlotter:
         - Y-axis gridlines are dashed and dark gray, while x-axis gridlines are disabled.
         - The chart clips any marks that fall outside the specified scale domain.
         """
-
         _df = self.elicit_date_column(data)
 
         # Calculate percentiles across columns
@@ -481,11 +491,11 @@ class LinePlotter:
         alt_x = alt.X(
             "date:T",
             axis=alt.Axis(
-                title=self.x_axis_title,
-                titleFontSize=self.axis_title_font_size,
-                format=self.date_format,
-                labelFontSize=self.tick_font_size,
-                labelAngle=self.x_ticks_angle,
+                title=x_axis_title,
+                titleFontSize=axis_title_font_size,
+                format=date_format,
+                labelFontSize=tick_font_size,
+                labelAngle=x_ticks_angle,
                 grid=False,
                 labelAlign="center",  # Centers labels under their tick marks
             ),
@@ -496,9 +506,9 @@ class LinePlotter:
         alt_y_scale = alt.Scale(domain=[yticks[0], yticks[-1]])
         alt_y_axis = alt.Axis(
             values=yticks,
-            title=self.y_axis_title,
-            titleFontSize=self.axis_title_font_size,
-            labelFontSize=self.tick_font_size,
+            title=y_axis_title,
+            titleFontSize=axis_title_font_size,
+            labelFontSize=tick_font_size,
             titleAnchor="start",  # Puts y-axis title in bottom left corner of plot
             titleAngle=0,  # Makes y-axis title horizontal
             titleY=-10,  # Moves y-axis title up to the upper left corner of plot
@@ -508,19 +518,21 @@ class LinePlotter:
 
         # Create the area chart
         alt_area_legend = alt.Legend(
-            title=None,
-            labelFontSize=self.axis_title_font_size,
-            offset=1,  # Offset in pixels by which to displace the legend from the data rectangle and axes.
-            symbolSize=300,  # Length of the variable’s stroke in the legend
-            symbolStrokeWidth=5,  # Width of the variable’s stroke in the legend
-            orient=legend_box_orient
-            if legend_box_orient
-            else self.legend_box_orient,  # Position of legend box in plot
-            labelLimit=0,  # Ensures labels are not truncated
-            fillColor="white",  # Background color of the legend box
-            symbolType="square",  # Shape of the legend symbol
+            title=legend_title,
+            titleFontSize=axis_title_font_size,
+            labelFontSize=axis_title_font_size,
+            offset=1,
+            symbolSize=300,
+            symbolStrokeWidth=5,
+            orient=legend_box_orient,
+            labelLimit=0,
+            strokeColor="black" if add_legend_border else None,
+            fillColor="white",
+            symbolType="square",
+            direction=legend_direction,
         )
 
+        # Create the area chart and customize
         area_chart = (
             alt.Chart(area_data)
             .mark_area(
@@ -538,13 +550,13 @@ class LinePlotter:
             )
         )
 
-        area_chart = area_chart.properties(width=self.width, height=self.height)
+        # Add title and set dimensions
+        alt_title = alt.TitleParams(
+            text=title, anchor="middle", fontSize=title_font_size
+        )
+        area_chart = area_chart.properties(width=width, height=height, title=alt_title)
 
-        if base_chart:
-            chart = (base_chart + area_chart).resolve_scale(color="independent")
-            return chart
-        else:
-            return area_chart
+        return area_chart
 
 
 if __name__ == "__main__":
