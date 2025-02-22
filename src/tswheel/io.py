@@ -24,7 +24,7 @@ class IOManager:
         make_tmp_output_file (bool): Whether to create a temporary output file
     """
 
-    SUPPORTED_EXTENSIONS = {".pkl", ".json", ".csv", ".xlsx"}
+    SUPPORTED_EXTENSIONS = {".pkl", ".json", ".csv", ".xlsx", ".png", ".pdf"}
 
     def __init__(
         self,
@@ -55,7 +55,7 @@ class IOManager:
         self.input_filename: Optional[Path] = (
             Path(input_filename) if input_filename else None
         )
-        self.output_dir: Optional[Path] = Path(output_dir) if output_dir else Path.cwd()
+        self.output_dir: Optional[Path] = Path(output_dir) if output_dir else None
         self.output_filename: Optional[Path] = (
             Path(output_filename) if output_filename else None
         )
@@ -79,7 +79,11 @@ class IOManager:
 
         # Combine output directory and filename to form the full output path, if possible.
         if self.output_filename:
-            self.output_path: Optional[Path] = self.output_dir / self.output_filename
+            self.output_path: Optional[Path] = (
+                self.output_dir / self.output_filename
+                if self.output_dir
+                else Path.cwd() / self.output_filename
+            )
         else:
             self.output_path = None
 
@@ -198,8 +202,9 @@ class IOManager:
         if not self.output_path:
             raise FileNotFoundError("Output path is not set")
 
-        # Create output directory if it doesn't exist
-        self.output_path.mkdir(parents=True, exist_ok=True)
+        # Create output directory only if it's specified
+        if self.output_dir:
+            self.output_path.parent.mkdir(parents=True, exist_ok=True)
 
         suffix = self.output_path.suffix.lower()
         if suffix not in self.SUPPORTED_EXTENSIONS:
@@ -213,3 +218,7 @@ class IOManager:
             output.to_csv(self.output_path, **kwargs)
         if suffix == ".xlsx":
             output.to_excel(self.output_path, **kwargs)
+        if suffix == ".png":
+            output.save(self.output_path, ppi=150)
+        if suffix == ".pdf":
+            output.save(self.output_path)
