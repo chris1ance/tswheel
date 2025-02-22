@@ -25,30 +25,8 @@ class LinePlotter:
     def __init__(
         self,
         fred_api_key: str | None = None,
-        date_format: str = "%Y",
-        title: str = "",
-        title_font_size: int = 24,
-        x_axis_title: str | None = None,
-        y_axis_title: str | None = None,
-        axis_title_font_size: int = 20,
-        tick_font_size: int = 18,
-        x_ticks_angle: int = 0,
-        width: int = 800,
-        height: int = 400,
-        legend_box_orient: Literal[LEGEND_BOX_ORIENTATIONS] = "top-left",
     ):
         self.fred_api_key = fred_api_key
-        self.date_format = date_format
-        self.title = title
-        self.title_font_size = title_font_size
-        self.x_axis_title = x_axis_title
-        self.y_axis_title = y_axis_title
-        self.axis_title_font_size = axis_title_font_size
-        self.tick_font_size = tick_font_size
-        self.x_ticks_angle = x_ticks_angle
-        self.width = width
-        self.height = height
-        self.legend_box_orient = legend_box_orient
         self.recession_bars_plot = None
 
     @lru_cache(maxsize=None)
@@ -274,8 +252,19 @@ class LinePlotter:
         y_tick_min: int | float,
         y_tick_max: int | float,
         y_tick_step: int | float,
+        title: str = "",
+        x_axis_title: str = "",
+        y_axis_title: str = "",
         add_legend_border: bool = True,
-        legend_box_orient: Literal[LEGEND_BOX_ORIENTATIONS] | None = None,
+        legend_box_orient: Literal[LEGEND_BOX_ORIENTATIONS] = "top-left",
+        legend_direction: Literal["horizontal", "vertical"] = "vertical",
+        date_format: str = "%Y",
+        title_font_size: int = 24,
+        axis_title_font_size: int = 20,
+        tick_font_size: int = 18,
+        x_ticks_angle: int = 0,
+        width: int = 800,
+        height: int = 400,
     ):
         """
         Create an Altair line plot from time series data with optional recession bars overlay.
@@ -318,11 +307,12 @@ class LinePlotter:
         alt_x = alt.X(
             "date:T",
             axis=alt.Axis(
-                title=self.x_axis_title,
-                titleFontSize=self.axis_title_font_size,
-                format=self.date_format,
-                labelFontSize=self.tick_font_size,
-                labelAngle=self.x_ticks_angle,
+                title=x_axis_title,
+                titleFontSize=axis_title_font_size,
+                titleFontWeight="normal",
+                format=date_format,
+                labelFontSize=tick_font_size,
+                labelAngle=x_ticks_angle,
                 grid=False,
                 labelAlign="center",  # Centers labels under their tick marks
             ),
@@ -336,9 +326,10 @@ class LinePlotter:
             scale=alt.Scale(domain=[yticks[0], yticks[-1]]),
             axis=alt.Axis(
                 values=yticks,
-                title=self.y_axis_title,
-                titleFontSize=self.axis_title_font_size,
-                labelFontSize=self.tick_font_size,
+                title=y_axis_title,
+                titleFontSize=axis_title_font_size,
+                titleFontWeight="normal",
+                labelFontSize=tick_font_size,
                 titleAnchor="start",  # Puts y-axis title in bottom left corner of plot
                 titleAngle=0,  # Makes y-axis title horizontal
                 titleY=-10,  # Moves y-axis title up to the upper left corner of plot
@@ -350,19 +341,18 @@ class LinePlotter:
         # Customize series legend
         alt_legend = alt.Legend(
             title=None,
-            labelFontSize=self.axis_title_font_size,
+            labelFontSize=axis_title_font_size,
             offset=1,  # Offset in pixels by which to displace the legend from the data rectangle and axes.
             symbolSize=300,  # Length of the variable’s stroke in the legend
             symbolStrokeWidth=10,  # Width of the variable’s stroke in the legend
-            orient=legend_box_orient
-            if legend_box_orient
-            else self.legend_box_orient,  # Position of legend box in plot
+            orient=legend_box_orient,  # Position of legend box in plot
             labelLimit=0,  # Ensures labels are not truncated
             strokeColor="black"
             if add_legend_border
             else None,  # Color of border around the legend
             fillColor="white",  # Background color of the legend box
             symbolType="stroke",  # Shape of the legend symbol
+            direction=legend_direction,
         )
 
         # Series colors and series legend
@@ -372,7 +362,7 @@ class LinePlotter:
         alt_color = alt.Color("Series:N", scale=alt_scale, legend=alt_legend)
 
         # Make chart
-        # clip=True: Clip any marks (e.g. lines or points) falling outside specified scale domain
+        # clip=True: Clip marks (e.g. lines or points) falling outside specified scale domain
         chart = (
             alt.Chart(df_melted)
             .mark_line(size=4, clip=True)
@@ -391,8 +381,8 @@ class LinePlotter:
             chart += black_hline_plot
 
         # Customize plot title
-        alt_title = alt.TitleParams(text=self.title, fontSize=self.title_font_size)
-        chart = chart.properties(width=self.width, height=self.height, title=alt_title)
+        alt_title = alt.TitleParams(text=title, fontSize=title_font_size)
+        chart = chart.properties(width=width, height=height, title=alt_title)
 
         return chart
 
@@ -403,6 +393,7 @@ class LinePlotter:
         y_tick_min: int | float,
         y_tick_max: int | float,
         y_tick_step: int | float,
+        title: str = "",
         percentile_type: Literal["25_75", "10_90", "min_max"] = "25_75",
         base_chart: alt.Chart | None = None,
         legend_box_orient: Literal[LEGEND_BOX_ORIENTATIONS] | None = None,
