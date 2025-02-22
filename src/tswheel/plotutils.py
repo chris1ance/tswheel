@@ -25,9 +25,21 @@ class LinePlotter:
     def __init__(
         self,
         fred_api_key: str | None = None,
+        width: int = 800,
+        height: int = 400,
     ):
         self.fred_api_key = fred_api_key
         self.recession_bars_plot = None
+        self.width = width
+        self.height = height
+
+    def set_width(self, width: int):
+        """Set the width of the plot."""
+        self.width = width
+
+    def set_height(self, height: int):
+        """Set the height of the plot."""
+        self.height = height
 
     @lru_cache(maxsize=None)
     def get_recessions(
@@ -264,8 +276,6 @@ class LinePlotter:
         axis_title_font_size: int = 20,
         tick_font_size: int = 18,
         x_ticks_angle: int = 0,
-        width: int = 800,
-        height: int = 400,
     ):
         """
         Create an Altair line plot from time series data with optional recession bars overlay.
@@ -392,7 +402,7 @@ class LinePlotter:
         alt_title = alt.TitleParams(
             text=title, anchor="middle", fontSize=title_font_size
         )
-        chart = chart.properties(width=width, height=height, title=alt_title)
+        chart = chart.properties(width=self.width, height=self.height, title=alt_title)
 
         return chart
 
@@ -415,8 +425,6 @@ class LinePlotter:
         axis_title_font_size: int = 20,
         tick_font_size: int = 18,
         x_ticks_angle: int = 0,
-        width: int = 800,
-        height: int = 400,
         percentile_type: Literal["25_75", "10_90", "min_max"] = "25_75",
         center_line: Literal["median", "mean", "all", "none"] = "none",
         series_colors: dict[str, str] | str | None = None,
@@ -561,7 +569,9 @@ class LinePlotter:
         alt_title = alt.TitleParams(
             text=title, anchor="middle", fontSize=title_font_size
         )
-        area_chart = area_chart.properties(width=width, height=height, title=alt_title)
+        area_chart = area_chart.properties(
+            width=self.width, height=self.height, title=alt_title
+        )
 
         if center_line == "none":
             return area_chart
@@ -592,8 +602,6 @@ class LinePlotter:
             y_tick_min=y_tick_min,
             y_tick_max=y_tick_max,
             y_tick_step=y_tick_step,
-            width=width,
-            height=height,
             title="",  # No title for overlay
             add_legend_border=add_legend_border,
             legend_box_orient=legend_box_orient,
