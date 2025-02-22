@@ -248,10 +248,10 @@ class LinePlotter:
     def make_line_chart(
         self,
         data: pd.DataFrame,
-        series_colors: dict[str, str],
         y_tick_min: int | float,
         y_tick_max: int | float,
         y_tick_step: int | float,
+        series_colors: dict[str, str] | str | None = None,
         title: str = "",
         x_axis_title: str = "",
         y_axis_title: str = "",
@@ -359,16 +359,21 @@ class LinePlotter:
         )
 
         # Series colors and series legend
-        series_names = list(series_colors.keys())
-        series_colors = list(series_colors.values())
-        alt_scale = alt.Scale(domain=series_names, range=series_colors)
+        if isinstance(series_colors, dict):
+            series_names = list(series_colors.keys())
+            series_colors = list(series_colors.values())
+            alt_scale = alt.Scale(domain=series_names, range=series_colors)
+        else:
+            alt_scale = alt.Scale(
+                scheme=series_colors if series_colors else "category10"
+            )
         alt_color = alt.Color("Series:N", scale=alt_scale, legend=alt_legend)
 
         # Make chart
         # clip=True: Clip marks (e.g. lines or points) falling outside specified scale domain
         chart = (
             alt.Chart(df_melted)
-            .mark_line(size=4, clip=True)
+            .mark_line(size=4, clip=True, interpolate="monotone")
             .encode(x=alt_x, y=alt_y, color=alt_color)
         )
 
@@ -402,8 +407,8 @@ class LinePlotter:
         x_axis_title: str = "",
         y_axis_title: str = "",
         legend_title: str = "",
-        add_legend_border: bool = True,
-        legend_box_orient: Literal[LEGEND_BOX_ORIENTATIONS] = "top-left",
+        add_legend_border: bool = False,
+        legend_box_orient: Literal[LEGEND_BOX_ORIENTATIONS] = "right",
         legend_direction: Literal["horizontal", "vertical"] = "vertical",
         date_format: str = "%Y",
         title_font_size: int = 24,
@@ -413,6 +418,8 @@ class LinePlotter:
         width: int = 800,
         height: int = 400,
         percentile_type: Literal["25_75", "10_90", "min_max"] = "25_75",
+        center_line: Literal["median", "mean", "all", "none"] = "none",
+        series_colors: dict[str, str] | str | None = None,
     ):
         """
         Create an Altair chart displaying the median with percentile ranges as an area.
@@ -556,7 +563,45 @@ class LinePlotter:
         )
         area_chart = area_chart.properties(width=width, height=height, title=alt_title)
 
-        return area_chart
+        if center_line == "none":
+            return area_chart
+
+        # Prepare line data
+        _df = self.elicit_date_column(data)
+        date_col = _df["date"]
+        data_cols = _df.drop(columns=["date"])
+
+        if center_line == "median":
+            line_data = pd.DataFrame(
+                {"date": date_col, "Median": data_cols.median(axis=1)}
+            )
+            _series_colors = {"Median": area_color}
+        elif center_line == "mean":
+            line_data = pd.DataFrame({"date": date_col, "Mean": data_cols.mean(axis=1)})
+            _series_colors = {"Mean": area_color}
+        elif center_line == "all":
+            line_data = _df
+            _series_colors = series_colors
+        else:
+            raise ValueError("Invalid center_line option")
+
+        # Create and combine line overlay
+        line_chart = self.make_line_chart(
+            data=line_data,
+            series_colors=_series_colors,
+            y_tick_min=y_tick_min,
+            y_tick_max=y_tick_max,
+            y_tick_step=y_tick_step,
+            width=width,
+            height=height,
+            title="",  # No title for overlay
+            add_legend_border=add_legend_border,
+            legend_box_orient=legend_box_orient,
+            legend_direction=legend_direction,
+            date_format=date_format,
+        )
+
+        return (line_chart + area_chart).resolve_scale(color="independent")
 
 
 if __name__ == "__main__":
