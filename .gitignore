@@ -27,3 +27,7 @@ logs/
 
 # Environment variables
 .env
+
+# Non-Binary Files
+*.png
+*.pdf

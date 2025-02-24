@@ -11,8 +11,9 @@ classifiers = [
   "Programming Language :: Python :: 3 :: Only",
 ]
 dependencies = [
-    "altair[all]>=5.5.0",
+    "altair>=5.5.0",
     "fredapi>=0.5.2",
+    "matplotlib>=3.10.0",
     "openpyxl>=3.1.5",
     "pandas>=2.2.3",
     "pytest-mock>=3.14.0",
@@ -20,9 +21,9 @@ dependencies = [
     "requests>=2.32.3",
     "scikit-learn>=1.6.0",
     "scikit-learn-intelex>=2025.0.1",
-    "seaborn>=0.13.2",
     "sktime>=0.36.0",
     "statsmodels>=0.14.4",
+    "vl-convert-python>=1.7.0",
 ]
 
 [build-system]
