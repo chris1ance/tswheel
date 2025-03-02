@@ -161,6 +161,7 @@ class HistogramPlotter:
         # Add mean line if requested
         if show_mean_line:
             mean_value = df[value_column].mean()
+
             mean_rule = (
                 alt.Chart(pd.DataFrame({"mean": [mean_value]}))
                 .mark_rule(color=mean_line_color, strokeDash=[4, 4], size=4)
@@ -168,11 +169,34 @@ class HistogramPlotter:
                     x="mean:Q",
                 )
             )
-            chart = chart + mean_rule
+
+            # Add text label for mean
+            mean_text = (
+                alt.Chart(
+                    pd.DataFrame(
+                        {
+                            "mean": [mean_value],
+                            "y": [0],
+                            "label": [f"Mean: {mean_value:.2f}"],
+                        }
+                    )
+                )
+                .mark_text(
+                    align="right",
+                    dx=-10,  # Offset text to the right of the line
+                    dy=-self.height * 0.95,  # Offset text from the bottom
+                    fontSize=tick_font_size,
+                    color=mean_line_color,
+                    fontWeight="bold",
+                )
+                .encode(x="mean:Q", y="y:Q", text="label:N")
+            )
+            chart = chart + mean_rule + mean_text
 
         # Add median line if requested
         if show_median_line:
             median_value = df[value_column].median()
+
             median_rule = (
                 alt.Chart(pd.DataFrame({"median": [median_value]}))
                 .mark_rule(color=median_line_color, strokeDash=[4, 4], size=4)
@@ -180,7 +204,30 @@ class HistogramPlotter:
                     x="median:Q",
                 )
             )
-            chart = chart + median_rule
+
+            # Add text label for median
+            median_text = (
+                alt.Chart(
+                    pd.DataFrame(
+                        {
+                            "median": [median_value],
+                            "y": [0],
+                            "label": [f"Median: {median_value:.2f}"],
+                        }
+                    )
+                )
+                .mark_text(
+                    align="left",
+                    dx=10,  # Offset text to the right of the line
+                    dy=-self.height * 0.95,  # Offset text from the bottom
+                    fontSize=tick_font_size,
+                    color=median_line_color,
+                    fontWeight="bold",
+                )
+                .encode(x="median:Q", y="y:Q", text="label:N")
+            )
+
+            chart = chart + median_rule + median_text
 
         # Set title and dimensions
         alt_title = alt.TitleParams(
