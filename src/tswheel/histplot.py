@@ -48,9 +48,10 @@ class HistogramPlotter:
         title_font_size: int = 24,
         axis_title_font_size: int = 20,
         tick_font_size: int = 18,
+        x_tick_decimal_places: int = 1,
         show_mean_line: bool = False,
         show_median_line: bool = False,
-        mean_line_color: str = "cyan",
+        mean_line_color: str = "orange",
         median_line_color: str = "red",
     ):
         """
@@ -135,6 +136,7 @@ class HistogramPlotter:
                 labelFontSize=tick_font_size,
                 grid=False,
                 labelAlign="center",  # Centers labels under their tick marks
+                format=f".{x_tick_decimal_places}f",
             ),
         )
 
