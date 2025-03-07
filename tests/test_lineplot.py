@@ -32,11 +32,11 @@ def export_all_charts_after_tests(request):
         )
 
         # Save combined chart as PDF
-        pdf_path = os.path.join(output_dir, "combined_lineplots.pdf")
+        pdf_path = os.path.join(output_dir, "lineplots.pdf")
         combined_chart.save(pdf_path)
 
         # Save combined chart as PNG
-        png_path = os.path.join(output_dir, "combined_lineplots.png")
+        png_path = os.path.join(output_dir, "lineplots.png")
         combined_chart.save(png_path)
 
 
