@@ -27,7 +27,9 @@ def export_all_charts_after_tests(request):
         os.makedirs(output_dir, exist_ok=True)
 
         # Concatenate charts vertically
-        combined_chart = alt.vconcat(*ChartStore.charts, spacing=30)
+        combined_chart = alt.vconcat(*ChartStore.charts, spacing=30).resolve_scale(
+            color="independent"
+        )
 
         # Save combined chart as PDF
         pdf_path = os.path.join(output_dir, "combined_histograms.pdf")
