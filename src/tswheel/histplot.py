@@ -45,7 +45,7 @@ class HistogramPlotter:
         line_color: str,
         height_multiplier: float = 0.95,
     ):
-        mean_rule = (
+        rule = (
             alt.Chart(pd.DataFrame({name: [value]}))
             .mark_rule(color=line_color, strokeDash=[4, 4], size=4)
             .encode(
@@ -53,8 +53,7 @@ class HistogramPlotter:
             )
         )
 
-        # Add text label for mean
-        mean_text = (
+        text = (
             alt.Chart(
                 pd.DataFrame(
                     {
@@ -75,7 +74,7 @@ class HistogramPlotter:
             .encode(x=f"{name}:Q", y="y:Q", text="label:N")
         )
 
-        chart = mean_rule + mean_text
+        chart = rule + text
 
         return chart
 
