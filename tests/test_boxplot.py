@@ -81,9 +81,14 @@ class TestBoxPlot:
 
     def test_basic_boxplot(self, plotter, single_group_data):
         """Test creating a basic boxplot with default settings."""
+        # Add a dummy group column for single boxplot
+        data = single_group_data.copy()
+        data["group"] = "All Data"
+
         chart = plotter.make_boxplot(
-            data=single_group_data,
+            data=data,
             value_column="values",
+            group_column="group",
             title="Basic Boxplot",
         )
 
@@ -96,18 +101,41 @@ class TestBoxPlot:
 
     def test_custom_styling(self, plotter, single_group_data):
         """Test boxplot with custom styling options."""
+        # Add a dummy group column for single boxplot
+        data = single_group_data.copy()
+        data["group"] = "All Data"
+
         chart = plotter.make_boxplot(
-            data=single_group_data,
+            data=data,
             value_column="values",
-            color="steelblue",
+            group_column="group",
+            series_colors="greens",
             title="Custom Styled Boxplot",
             x_axis_title="",
             y_axis_title="Values",
             title_font_size=20,
             axis_title_font_size=16,
             tick_font_size=14,
-            median_color="darkred",
+            median_color="darkred",  # Custom median color
             box_width=40,
+        )
+
+        assert isinstance(chart, alt.Chart)
+
+        # Store chart for global export
+        ChartStore.charts.append(chart)
+
+    def test_default_median_color(self, plotter, single_group_data):
+        """Test boxplot with default median color (black)."""
+        # Add a dummy group column for single boxplot
+        data = single_group_data.copy()
+        data["group"] = "All Data"
+
+        chart = plotter.make_boxplot(
+            data=data,
+            value_column="values",
+            group_column="group",
+            title="Boxplot with Default Median Color",
         )
 
         assert isinstance(chart, alt.Chart)
@@ -117,9 +145,14 @@ class TestBoxPlot:
 
     def test_no_outliers(self, plotter, single_group_data):
         """Test boxplot with outliers hidden."""
+        # Add a dummy group column for single boxplot
+        data = single_group_data.copy()
+        data["group"] = "All Data"
+
         chart = plotter.make_boxplot(
-            data=single_group_data,
+            data=data,
             value_column="values",
+            group_column="group",
             title="Boxplot without Outliers",
             show_outliers=False,
         )
@@ -174,10 +207,8 @@ class TestBoxPlot:
             data=multi_group_data,
             value_column="values",
             group_column="group",
-            color=color_mapping,
+            series_colors=color_mapping,
             title="Boxplot with Custom Colors",
-            legend_title="Groups",
-            legend_box_orient="top-right",
         )
 
         assert isinstance(chart, alt.Chart)
@@ -191,12 +222,8 @@ class TestBoxPlot:
             data=multi_group_data,
             value_column="values",
             group_column="group",
-            color="category10",
+            series_colors="category10",
             title="Boxplot with Color Scheme",
-            legend_title="Groups",
-            legend_direction="horizontal",
-            legend_box_orient="bottom",
-            add_legend_border=False,
         )
 
         assert isinstance(chart, alt.Chart)
@@ -206,9 +233,14 @@ class TestBoxPlot:
 
     def test_custom_y_axis_ticks(self, plotter, single_group_data):
         """Test boxplot with custom y-axis tick values."""
+        # Add a dummy group column for single boxplot
+        data = single_group_data.copy()
+        data["group"] = "All Data"
+
         chart = plotter.make_boxplot(
-            data=single_group_data,
+            data=data,
             value_column="values",
+            group_column="group",
             title="Boxplot with Custom Y-Axis Ticks",
             y_tick_min=0,
             y_tick_max=10,
@@ -225,14 +257,34 @@ class TestBoxPlot:
         plotter.set_width(800)
         plotter.set_height(400)
 
+        # Add a dummy group column for single boxplot
+        data = single_group_data.copy()
+        data["group"] = "All Data"
+
         chart = plotter.make_boxplot(
-            data=single_group_data,
+            data=data,
             value_column="values",
+            group_column="group",
             title="Custom Size Boxplot",
         )
 
         assert chart.width == 800
         assert chart.height == 400
+
+        # Store chart for global export
+        ChartStore.charts.append(chart)
+
+    def test_x_ticks_angle(self, plotter, multi_group_data):
+        """Test boxplot with rotated x-axis tick labels."""
+        chart = plotter.make_boxplot(
+            data=multi_group_data,
+            value_column="values",
+            group_column="group",
+            title="Boxplot with Rotated X-Axis Labels",
+            x_ticks_angle=45,
+        )
+
+        assert isinstance(chart, alt.Chart)
 
         # Store chart for global export
         ChartStore.charts.append(chart)
