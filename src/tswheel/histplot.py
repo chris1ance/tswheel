@@ -4,21 +4,13 @@ import pandas as pd
 import altair as alt
 from typing import Literal
 
+from .constants import LEGEND_BOX_ORIENTATIONS
+
 pd.set_option("mode.copy_on_write", True)
 
 
 class HistogramPlotter:
-    LEGEND_BOX_ORIENTATIONS = [
-        "none",
-        "left",
-        "right",
-        "top",
-        "bottom",
-        "top-left",
-        "top-right",
-        "bottom-left",
-        "bottom-right",
-    ]
+    LEGEND_BOX_ORIENTATIONS = LEGEND_BOX_ORIENTATIONS
 
     def __init__(
         self,

@@ -6,21 +6,13 @@ from fredapi import Fred
 import altair as alt
 from functools import lru_cache
 
+from .constants import LEGEND_BOX_ORIENTATIONS
+
 pd.set_option("mode.copy_on_write", True)
 
 
 class LinePlotter:
-    LEGEND_BOX_ORIENTATIONS = [
-        "none",
-        "left",
-        "right",
-        "top",
-        "bottom",
-        "top-left",
-        "top-right",
-        "bottom-left",
-        "bottom-right",
-    ]
+    LEGEND_BOX_ORIENTATIONS = LEGEND_BOX_ORIENTATIONS
 
     def __init__(
         self,
