@@ -2,6 +2,7 @@
 
 import pandas as pd
 import altair as alt
+from typing import Literal
 
 pd.set_option("mode.copy_on_write", True)
 
@@ -34,6 +35,49 @@ class HistogramPlotter:
     def set_height(self, height: int):
         """Set the height of the plot."""
         self.height = height
+
+    def make_vline_plot(
+        self,
+        name: str,
+        value: int | float,
+        align: Literal["right", "left"],
+        text_font_size: int,
+        line_color: str,
+        height_multiplier: float = 0.95,
+    ):
+        mean_rule = (
+            alt.Chart(pd.DataFrame({name: [value]}))
+            .mark_rule(color=line_color, strokeDash=[4, 4], size=4)
+            .encode(
+                x=f"{name}:Q",
+            )
+        )
+
+        # Add text label for mean
+        mean_text = (
+            alt.Chart(
+                pd.DataFrame(
+                    {
+                        name: [value],
+                        "y": [0],
+                        "label": [f"{name}: {value:.2f}"],
+                    }
+                )
+            )
+            .mark_text(
+                align=align,
+                dx=10 if align == "left" else -10,  # Offset text from the line
+                dy=-self.height * height_multiplier,  # Offset text from the bottom
+                fontSize=text_font_size,
+                color=line_color,
+                fontWeight="bold",
+            )
+            .encode(x=f"{name}:Q", y="y:Q", text="label:N")
+        )
+
+        chart = mean_rule + mean_text
+
+        return chart
 
     def make_histogram(
         self,
