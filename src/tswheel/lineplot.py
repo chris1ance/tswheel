@@ -275,15 +275,40 @@ class LinePlotter:
         Parameters:
         -----------
         data : pd.DataFrame
-            Time series data with DateTime index and columns for each time series to plot.
-        series_colors : dict[str,str]
-            Dictionary mapping series names to their desired colors.
-        y_tick_min : int|float
+            Time series data with a date/datetime column and columns for each time series to plot.
+        y_tick_min : int | float
             Minimum value for y-axis ticks.
-        y_tick_max : int|float
+        y_tick_max : int | float
             Maximum value for y-axis ticks.
-        y_tick_step : int|float
+        y_tick_step : int | float
             Step size between y-axis ticks.
+        series_colors : dict[str, str] | str | None, optional
+            Dictionary mapping series names to their desired colors, a named color scheme,
+            or None to use the default 'category10' color scheme. Default: None.
+        title : str, optional
+            Title for the chart. Default: "".
+        x_axis_title : str, optional
+            Title for the x-axis. Default: "".
+        y_axis_title : str, optional
+            Title for the y-axis. Default: "".
+        legend_title : str, optional
+            Title for the legend. Default: "".
+        add_legend_border : bool, optional
+            Whether to add a border around the legend. Default: True.
+        legend_box_orient : Literal[LEGEND_BOX_ORIENTATIONS], optional
+            Position of legend box in plot. Default: "top-left".
+        legend_direction : Literal["horizontal", "vertical"], optional
+            Direction of the legend items. Default: "vertical".
+        date_format : str, optional
+            Format string for date labels on x-axis. Default: "%Y".
+        title_font_size : int, optional
+            Font size for the chart title. Default: 24.
+        axis_title_font_size : int, optional
+            Font size for axis titles. Default: 20.
+        tick_font_size : int, optional
+            Font size for tick labels. Default: 18.
+        x_ticks_angle : int, optional
+            Angle for x-axis tick labels in degrees. Default: 0.
 
         Returns:
         --------
@@ -292,9 +317,10 @@ class LinePlotter:
 
         Notes:
         ------
-        - The function automatically adds a horizontal line at y=0 if the y-axis range includes both
-        positive and negative values.
-        - If a FRED API key is provided, gray bars indicating recession periods will be overlaid on the plot.
+        - The function automatically detects the date column or uses the DataFrame index if it's a DateTimeIndex.
+        - A horizontal line at y=0 is added if the y-axis range includes both positive and negative values.
+        - If a FRED API key is provided during LinePlotter initialization, gray bars indicating
+          recession periods will be overlaid on the plot.
         - Y-axis gridlines are dashed and dark gray, while x-axis gridlines are disabled.
         - The chart clips any marks that fall outside the specified scale domain.
         """
@@ -348,8 +374,8 @@ class LinePlotter:
             titleLimit=0,  # Ensures title is not truncated
             labelFontSize=axis_title_font_size,
             offset=1,  # Offset in pixels by which to displace the legend from the data rectangle and axes.
-            symbolSize=300,  # Length of the variable’s stroke in the legend
-            symbolStrokeWidth=10,  # Width of the variable’s stroke in the legend
+            symbolSize=300,  # Length of the variable's stroke in the legend
+            symbolStrokeWidth=10,  # Width of the variable's stroke in the legend
             orient=legend_box_orient,  # Position of legend box in plot
             labelLimit=0,  # Ensures labels are not truncated
             strokeColor="black"
@@ -422,28 +448,59 @@ class LinePlotter:
         series_colors: dict[str, str] | str | None = None,
     ):
         """
-        Create an Altair chart displaying the median with percentile ranges as an area.
+        Create an Altair chart displaying percentile ranges as a shaded area with optional center line.
 
         Parameters:
         -----------
         data : pd.DataFrame
-            Time series data with DateTime index and a single column for the time series.
-        median_color : str
-            Color for the median line.
+            Time series data with a date/datetime column and multiple columns of time series data
+            used to calculate percentiles across.
         area_color : str
             Color for the percentile area.
-        y_tick_min : int|float
+        y_tick_min : int | float
             Minimum value for y-axis ticks.
-        y_tick_max : int|float
+        y_tick_max : int | float
             Maximum value for y-axis ticks.
-        y_tick_step : int|float
+        y_tick_step : int | float
             Step size between y-axis ticks.
+        title : str, optional
+            Title for the chart. Default: "".
+        x_axis_title : str, optional
+            Title for the x-axis. Default: "".
+        y_axis_title : str, optional
+            Title for the y-axis. Default: "".
+        legend_title : str, optional
+            Title for the legend. Default: "".
+        add_legend_border : bool, optional
+            Whether to add a border around the legend. Default: False.
+        legend_box_orient : Literal[LEGEND_BOX_ORIENTATIONS], optional
+            Position of legend box in plot. Default: "right".
+        legend_direction : Literal["horizontal", "vertical"], optional
+            Direction of the legend items. Default: "vertical".
+        date_format : str, optional
+            Format string for date labels on x-axis. Default: "%Y".
+        title_font_size : int, optional
+            Font size for the chart title. Default: 24.
+        axis_title_font_size : int, optional
+            Font size for axis titles. Default: 20.
+        tick_font_size : int, optional
+            Font size for tick labels. Default: 18.
+        x_ticks_angle : int, optional
+            Angle for x-axis tick labels in degrees. Default: 0.
         percentile_type : Literal["25_75", "10_90", "min_max"], optional
-            Type of percentile range to display.
-            "25_75": 25th to 75th percentile.
-            "10_90": 10th to 90th percentile.
-            "min_max": Minimum to Maximum values.
-            Default: "25_75".
+            Type of percentile range to display:
+            - "25_75": 25th to 75th percentile (default)
+            - "10_90": 10th to 90th percentile
+            - "min_max": Minimum to Maximum values
+        center_line : Literal["median", "mean", "all", "none"], optional
+            Type of center line to display:
+            - "none": No center line (default)
+            - "median": Show median line
+            - "mean": Show mean line
+            - "all": Show all original series
+        series_colors : dict[str, str] | str | None, optional
+            Dictionary mapping series names to their desired colors when center_line="all",
+            a named color scheme, or None to use default colors. Default: None.
 
         Returns:
         --------
@@ -452,11 +509,11 @@ class LinePlotter:
 
         Notes:
         ------
-        - The function automatically adds a horizontal line at y=0 if the y-axis range includes both
-          positive and negative values.
-        - If a FRED API key is provided, gray bars indicating recession periods will be overlaid on the plot.
+        - The function automatically detects the date column or uses the DataFrame index if it's a DateTimeIndex.
+        - Percentiles are calculated across the columns (series) for each time point.
+        - The opacity of the area is adjusted based on the percentile_type (0.3 for 25_75, 0.15 for others).
+        - If center_line is specified, a line chart is overlaid on the area chart.
         - Y-axis gridlines are dashed and dark gray, while x-axis gridlines are disabled.
-        - The chart clips any marks that fall outside the specified scale domain.
         """
         _df = self.elicit_date_column(data)
 

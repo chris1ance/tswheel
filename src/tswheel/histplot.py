@@ -10,6 +10,13 @@ pd.set_option("mode.copy_on_write", True)
 
 
 class HistogramPlotter:
+    """
+    A class for creating customized histogram plots using Altair.
+
+    This class provides methods to create and customize histogram visualizations,
+    including options for adding statistical indicators like mean and median lines.
+    """
+
     LEGEND_BOX_ORIENTATIONS = LEGEND_BOX_ORIENTATIONS
 
     def __init__(
@@ -17,15 +24,39 @@ class HistogramPlotter:
         width: int = 800,
         height: int = 400,
     ):
+        """
+        Initialize a HistogramPlotter with specified dimensions.
+
+        Parameters:
+        -----------
+        width : int, default=800
+            Width of the plot in pixels.
+        height : int, default=400
+            Height of the plot in pixels.
+        """
         self.width = width
         self.height = height
 
     def set_width(self, width: int):
-        """Set the width of the plot."""
+        """
+        Set the width of the plot.
+
+        Parameters:
+        -----------
+        width : int
+            New width value in pixels.
+        """
         self.width = width
 
     def set_height(self, height: int):
-        """Set the height of the plot."""
+        """
+        Set the height of the plot.
+
+        Parameters:
+        -----------
+        height : int
+            New height value in pixels.
+        """
         self.height = height
 
     def make_vline_plot(
@@ -37,6 +68,29 @@ class HistogramPlotter:
         line_color: str,
         height_multiplier: float = 0.95,
     ):
+        """
+        Create a vertical line with label for a statistical value.
+
+        Parameters:
+        -----------
+        name : str
+            Name of the statistical value (e.g., "Mean", "Median").
+        value : int | float
+            The value at which to draw the vertical line.
+        align : Literal["right", "left"]
+            Text alignment relative to the line.
+        text_font_size : int
+            Font size for the text label.
+        line_color : str
+            Color of the vertical line.
+        height_multiplier : float, default=0.95
+            Multiplier that determines the vertical position of the label.
+
+        Returns:
+        --------
+        alt.Chart
+            Altair chart object containing the vertical line and label.
+        """
         rule = (
             alt.Chart(pd.DataFrame({name: [value]}))
             .mark_rule(color=line_color, strokeDash=[4, 4], size=4)
@@ -98,52 +152,33 @@ class HistogramPlotter:
             DataFrame containing the data to plot.
         value_column : str
             Column name in the DataFrame that contains the values to create a histogram from.
-        bins : int, default=10
-            Number of bins to use in the histogram.
-        bin_step : float, optional
-            Width of each bin. If provided, overrides the bins parameter.
-        bin_min : float, optional
-            Minimum value for binning. If None, uses the minimum value in the data.
-        bin_max : float, optional
-            Maximum value for binning. If None, uses the maximum value in the data.
-        color : str, default='steelblue'
-            Color of the histogram bars when not using groupby.
-        opacity : float, default=0.8
+        bin_step : float
+            Width of each bin.
+        color : str, default="black"
+            Color of the histogram bars.
+        opacity : float, default=1.0
             Opacity of the histogram bars.
-        groupby_column : str, optional
-            Column name to group by, creating separate histograms for each group.
-        group_colors : dict[str, str] | str, optional
-            Colors for each group. Can be a dictionary mapping group values to colors,
-            or a string specifying an Altair color scheme.
         title : str, default=""
             Title for the chart.
         x_axis_title : str, default=""
             Title for the x-axis.
         y_axis_title : str, default="Count"
             Title for the y-axis.
-        legend_title : str, default=""
-            Title for the legend.
-        add_legend_border : bool, default=True
-            Whether to add a border around the legend.
-        legend_box_orient : str, default="top-right"
-            Position of the legend within the chart.
-        legend_direction : str, default="vertical"
-            Direction of the legend items.
         title_font_size : int, default=24
             Font size for the chart title.
         axis_title_font_size : int, default=20
             Font size for the axis titles.
         tick_font_size : int, default=18
             Font size for the axis tick labels.
-        x_ticks_angle : int, default=0
-            Angle for the x-axis tick labels.
+        x_tick_decimal_places : int, default=1
+            Number of decimal places to show in x-axis tick labels.
         show_mean_line : bool, default=False
             Whether to show a vertical line at the mean value.
         show_median_line : bool, default=False
             Whether to show a vertical line at the median value.
-        mean_line_color : str, default="red"
+        mean_line_color : str, default="orange"
             Color of the mean line.
-        median_line_color : str, default="green"
+        median_line_color : str, default="red"
             Color of the median line.
 
         Returns:
