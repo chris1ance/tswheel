@@ -90,6 +90,11 @@ class TestHistogramPlotter:
 
     def test_custom_styling(self, plotter, normal_data):
         """Test histogram with custom styling options."""
+        # Set font sizes using setter methods
+        plotter.set_title_font_size(20)
+        plotter.set_axis_title_font_size(16)
+        plotter.set_tick_font_size(14)
+
         chart = plotter.make_histogram(
             data=normal_data,
             value_column="values",
@@ -99,9 +104,6 @@ class TestHistogramPlotter:
             title="Custom Styled Histogram",
             x_axis_title="Values",
             y_axis_title="Frequency",
-            title_font_size=20,
-            axis_title_font_size=16,
-            tick_font_size=14,
             x_tick_decimal_places=2,
         )
 
@@ -112,6 +114,11 @@ class TestHistogramPlotter:
 
         # Add to global chart collection for session-level export
         ChartStore.charts.append(chart)
+
+        # Reset plotter font sizes to defaults for subsequent tests
+        plotter.set_title_font_size(24)
+        plotter.set_axis_title_font_size(20)
+        plotter.set_tick_font_size(18)
 
     def test_with_mean_line(self, plotter, normal_data):
         """Test histogram with a mean line."""

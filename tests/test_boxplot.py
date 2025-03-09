@@ -105,6 +105,11 @@ class TestBoxPlot:
         data = single_group_data.copy()
         data["group"] = "All Data"
 
+        # Set font sizes using setter methods
+        plotter.set_title_font_size(20)
+        plotter.set_axis_title_font_size(16)
+        plotter.set_tick_font_size(14)
+
         chart = plotter.make_boxplot(
             data=data,
             value_column="values",
@@ -113,9 +118,6 @@ class TestBoxPlot:
             title="Custom Styled Boxplot",
             x_axis_title="",
             y_axis_title="Values",
-            title_font_size=20,
-            axis_title_font_size=16,
-            tick_font_size=14,
             median_color="darkred",  # Custom median color
             box_width=40,
         )
@@ -124,6 +126,11 @@ class TestBoxPlot:
 
         # Store chart for global export
         ChartStore.charts.append(chart)
+
+        # Reset plotter font sizes to defaults for subsequent tests
+        plotter.set_title_font_size(24)
+        plotter.set_axis_title_font_size(20)
+        plotter.set_tick_font_size(18)
 
     def test_default_median_color(self, plotter, single_group_data):
         """Test boxplot with default median color (black)."""

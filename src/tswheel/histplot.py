@@ -25,9 +25,12 @@ class HistogramPlotter:
         self,
         width: int = 800,
         height: int = 400,
+        title_font_size: int = 24,
+        axis_title_font_size: int = 20,
+        tick_font_size: int = 18,
     ):
         """
-        Initialize a HistogramPlotter with specified dimensions.
+        Initialize a HistogramPlotter with specified dimensions and font sizes.
 
         Parameters:
         -----------
@@ -35,9 +38,18 @@ class HistogramPlotter:
             Width of the plot in pixels.
         height : int, default=400
             Height of the plot in pixels.
+        title_font_size : int, default=24
+            Font size for the chart title.
+        axis_title_font_size : int, default=20
+            Font size for the axis titles.
+        tick_font_size : int, default=18
+            Font size for the axis tick labels.
         """
         self.width = width
         self.height = height
+        self.title_font_size = title_font_size
+        self.axis_title_font_size = axis_title_font_size
+        self.tick_font_size = tick_font_size
 
     def set_width(self, width: int):
         """
@@ -60,6 +72,39 @@ class HistogramPlotter:
             New height value in pixels.
         """
         self.height = height
+
+    def set_title_font_size(self, title_font_size: int):
+        """
+        Set the font size for chart titles.
+
+        Parameters:
+        -----------
+        title_font_size : int
+            New font size for chart titles.
+        """
+        self.title_font_size = title_font_size
+
+    def set_axis_title_font_size(self, axis_title_font_size: int):
+        """
+        Set the font size for axis titles.
+
+        Parameters:
+        -----------
+        axis_title_font_size : int
+            New font size for axis titles.
+        """
+        self.axis_title_font_size = axis_title_font_size
+
+    def set_tick_font_size(self, tick_font_size: int):
+        """
+        Set the font size for axis tick labels.
+
+        Parameters:
+        -----------
+        tick_font_size : int
+            New font size for axis tick labels.
+        """
+        self.tick_font_size = tick_font_size
 
     def make_vline_plot(
         self,
@@ -136,9 +181,6 @@ class HistogramPlotter:
         title: str = "",
         x_axis_title: str = "",
         y_axis_title: str = "Count",
-        title_font_size: int = 24,
-        axis_title_font_size: int = 20,
-        tick_font_size: int = 18,
         x_tick_decimal_places: int = 1,
         show_mean_line: bool = False,
         show_median_line: bool = False,
@@ -166,12 +208,6 @@ class HistogramPlotter:
             Title for the x-axis.
         y_axis_title : str, default="Count"
             Title for the y-axis.
-        title_font_size : int, default=24
-            Font size for the chart title.
-        axis_title_font_size : int, default=20
-            Font size for the axis titles.
-        tick_font_size : int, default=18
-            Font size for the axis tick labels.
         x_tick_decimal_places : int, default=1
             Number of decimal places to show in x-axis tick labels.
         show_mean_line : bool, default=False
@@ -204,8 +240,8 @@ class HistogramPlotter:
             bin=bin_settings,
             axis=alt.Axis(
                 title=x_axis_title,
-                titleFontSize=axis_title_font_size,
-                labelFontSize=tick_font_size,
+                titleFontSize=self.axis_title_font_size,
+                labelFontSize=self.tick_font_size,
                 grid=False,
                 labelAlign="center",  # Centers labels under their tick marks
                 format=f".{x_tick_decimal_places}f",
@@ -216,8 +252,8 @@ class HistogramPlotter:
             "count()",
             axis=alt.Axis(
                 title=y_axis_title,
-                titleFontSize=axis_title_font_size,
-                labelFontSize=tick_font_size,
+                titleFontSize=self.axis_title_font_size,
+                labelFontSize=self.tick_font_size,
                 gridDash=[2, 2],
                 gridColor="darkgray",
             ),
@@ -239,7 +275,7 @@ class HistogramPlotter:
                 name="Mean",
                 value=mean_value,
                 align="right",
-                text_font_size=tick_font_size,
+                text_font_size=self.tick_font_size,
                 line_color=mean_line_color,
             )
             chart = chart + mean_chart
@@ -251,14 +287,14 @@ class HistogramPlotter:
                 name="Median",
                 value=median_value,
                 align="left",
-                text_font_size=tick_font_size,
+                text_font_size=self.tick_font_size,
                 line_color=median_line_color,
             )
             chart = chart + median_chart
 
         # Set title and dimensions
         alt_title = alt.TitleParams(
-            text=title, anchor="middle", fontSize=title_font_size
+            text=title, anchor="middle", fontSize=self.title_font_size
         )
 
         chart = chart.properties(width=self.width, height=self.height, title=alt_title)
@@ -274,9 +310,6 @@ class HistogramPlotter:
         title: str = "",
         x_axis_title: str = "",
         y_axis_title: str = "",
-        title_font_size: int = 24,
-        axis_title_font_size: int = 20,
-        tick_font_size: int = 18,
         show_outliers: bool = True,
         box_width: int = 30,
         median_color: str = "black",
@@ -306,12 +339,6 @@ class HistogramPlotter:
             Title for the x-axis.
         y_axis_title : str, default=""
             Title for the y-axis.
-        title_font_size : int, default=24
-            Font size for the chart title.
-        axis_title_font_size : int, default=20
-            Font size for the axis titles.
-        tick_font_size : int, default=18
-            Font size for the axis tick labels.
         show_outliers : bool, default=True
             Whether to show outlier points outside the whiskers.
         box_width : int, default=30
@@ -350,9 +377,9 @@ class HistogramPlotter:
             f"{group_column}:N",
             sort=custom_order if custom_order else Undefined,
             axis=alt.Axis(
-                titleFontSize=axis_title_font_size,
+                titleFontSize=self.axis_title_font_size,
                 titleFontWeight="normal",
-                labelFontSize=tick_font_size,
+                labelFontSize=self.tick_font_size,
                 labelAngle=x_ticks_angle,
                 grid=False,
             ),
@@ -379,9 +406,9 @@ class HistogramPlotter:
             scale=scale,
             axis=alt.Axis(
                 values=yticks,
-                titleFontSize=axis_title_font_size,
+                titleFontSize=self.axis_title_font_size,
                 titleFontWeight="normal",
-                labelFontSize=tick_font_size,
+                labelFontSize=self.tick_font_size,
                 gridDash=[2, 2],
                 gridColor="darkgray",
             ),
@@ -426,7 +453,7 @@ class HistogramPlotter:
 
         # Set title and dimensions
         alt_title = alt.TitleParams(
-            text=title, anchor="middle", fontSize=title_font_size
+            text=title, anchor="middle", fontSize=self.title_font_size
         )
 
         chart = chart.properties(width=self.width, height=self.height, title=alt_title)
