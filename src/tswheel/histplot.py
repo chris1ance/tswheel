@@ -1,6 +1,7 @@
 """Utilities for Altair histogram plots."""
 
 import pandas as pd
+import numpy as np
 import altair as alt
 from altair.utils.schemapi import Undefined
 from typing import Literal
@@ -344,18 +345,18 @@ class HistogramPlotter:
         # Make a copy of the data to avoid modifying the original
         df = data.copy()
 
-        # Determine x encode based on whether grouping is used
+        # Custom x-axis settings
         x_encode = alt.X(
             f"{group_column}:N",
             sort=custom_order if custom_order else Undefined,
             axis=alt.Axis(
-                title=x_axis_title,
                 titleFontSize=axis_title_font_size,
                 titleFontWeight="normal",
                 labelFontSize=tick_font_size,
                 labelAngle=x_ticks_angle,
                 grid=False,
             ),
+            title=x_axis_title,
         )
 
         # Custom y-axis settings
@@ -364,7 +365,7 @@ class HistogramPlotter:
             and y_tick_max is not None
             and y_tick_step is not None
         ):
-            yticks = list(range(y_tick_min, y_tick_max + y_tick_step, y_tick_step))
+            yticks = list(np.arange(y_tick_min, y_tick_max + y_tick_step, y_tick_step))
             scale = alt.Scale(domain=[yticks[0], yticks[-1]])
         else:
             yticks = Undefined
@@ -378,13 +379,13 @@ class HistogramPlotter:
             scale=scale,
             axis=alt.Axis(
                 values=yticks,
-                title=y_axis_title,
                 titleFontSize=axis_title_font_size,
                 titleFontWeight="normal",
                 labelFontSize=tick_font_size,
                 gridDash=[2, 2],
                 gridColor="darkgray",
             ),
+            title=y_axis_title,
         )
 
         # Handle different color configurations
@@ -407,7 +408,7 @@ class HistogramPlotter:
                 legend=None,
             )
 
-        # Create the boxplot with color encoding
+        # Create the boxplot
         chart = (
             alt.Chart(df)
             .mark_boxplot(
