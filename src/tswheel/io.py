@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional, Union, Any, Dict
+from typing import Optional, Union, Any
 import pickle
 import pandas as pd
 import json
@@ -121,9 +121,6 @@ class IO:
         # Similarly, combine input directory and filename to form the full input path, if possible.
         if self.input_dir and self.input_filename:
             self.input_path: Optional[Path] = self.input_dir / self.input_filename
-            # Check if input file exists
-            if self.input_path and not self.input_path.exists():
-                raise FileNotFoundError(f"Input file {self.input_path} does not exist.")
         else:
             self.input_path = None
 
@@ -155,7 +152,7 @@ class IO:
             pickle.dump(output, file)
 
     @staticmethod
-    def read_json_file(input_path: Union[str, Path]) -> Dict:
+    def read_json_file(input_path: Union[str, Path]) -> dict:
         """
         Read a JSON file and return its contents as a dictionary.
 
@@ -170,7 +167,7 @@ class IO:
         return contents
 
     @staticmethod
-    def write_json_file(output: Dict, output_path: Union[str, Path]) -> None:
+    def write_json_file(output: dict, output_path: Union[str, Path]) -> None:
         """
         Write a dictionary to a JSON file.
 
@@ -201,10 +198,12 @@ class IO:
 
         Raises:
             ValueError: If file extension is not supported
-            FileNotFoundError: If input path is not set
+            FileNotFoundError: If input path is not set or if input file does not exist
         """
         if not self.input_path:
             raise FileNotFoundError("Input path is not set")
+        elif self.input_path and not self.input_path.exists():
+            raise FileNotFoundError(f"Input file {self.input_path} does not exist.")
 
         suffix = self.input_path.suffix.lower()
         if suffix not in self.SUPPORTED_EXTENSIONS:

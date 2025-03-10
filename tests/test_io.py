@@ -90,10 +90,15 @@ class TestIO:
         with pytest.raises(ValueError):
             IO(make_tmp_output_file=True)
 
-        # Test error when input path does not exist
+        # Test that no error is raised when input directory doesn't exist
+        # since IO class only validates input file existence when read_input is called
         non_existent_dir = temp_dir / "non_existent_dir"
+        io = IO(input_dir=non_existent_dir, input_filename="non_existent.json")
+        assert io.input_path == non_existent_dir / "non_existent.json"
+
+        # Check error is raised when trying to read from non-existent file
         with pytest.raises(FileNotFoundError):
-            IO(input_dir=non_existent_dir, input_filename="non_existent.json")
+            io.read_input()
 
     def test_pickle_io(self, temp_dir, sample_dict):
         """Test reading and writing pickle files."""
