@@ -5,7 +5,7 @@ import pandas as pd
 import json
 
 
-class IOManager:
+class IO:
     """
     A class to manage input/output operations for various file formats.
 
@@ -14,6 +14,8 @@ class IOManager:
     - JSON files (.json)
     - CSV files (.csv)
     - Excel files (.xlsx)
+    - PNG images (.png)
+    - PDF documents (.pdf)
 
     Attributes:
         input_dir (Optional[Path]): Directory containing input files
@@ -22,6 +24,8 @@ class IOManager:
         output_filename (Optional[Path]): Name of the output file
         make_tmp_output_dir (bool): Whether to create a temporary output directory
         make_tmp_output_file (bool): Whether to create a temporary output file
+        input_path (Optional[Path]): Full path to the input file (derived from input_dir and input_filename)
+        output_path (Optional[Path]): Full path to the output file (derived from output_dir and output_filename)
     """
 
     SUPPORTED_EXTENSIONS = {".pkl", ".json", ".csv", ".xlsx", ".png", ".pdf"}
@@ -38,17 +42,44 @@ class IOManager:
         """
         Initialize the IOManager with input and output paths.
 
+        Creates Path objects for input and output locations, automatically constructing
+        full paths when both directory and filename components are provided. When temporary
+        file or directory options are enabled, the paths are modified by appending '_tmp'.
+
         Args:
-            input_dir (Union[str, Path, None]): Directory containing input files.
-            input_filename (Union[str, Path, None]): Name of the input file.
-            output_dir (Union[str, Path, None]): Directory for output files.
-            output_filename (Union[str, Path, None]): Name of the output file.
-            make_tmp_output_dir (bool): Whether to create a temporary output directory.
-            make_tmp_output_file (bool): Whether to create a temporary output file.
+            input_dir (Union[str, Path, None]): Directory containing input files. If None,
+                input_path is set to None, even if input_filename is provided.
+            input_filename (Union[str, Path, None]): Name of the input file. Required with
+                input_dir to create a valid input_path.
+            output_dir (Union[str, Path, None]): Directory for output files. If None but
+                output_filename is provided, current working directory is used.
+            output_filename (Union[str, Path, None]): Name of the output file. If None,
+                output_path is set to None.
+            make_tmp_output_dir (bool): Whether to create a temporary output directory by
+                appending '_tmp' to the output_dir name.
+            make_tmp_output_file (bool): Whether to create a temporary output file by
+                appending '_tmp' to the output_filename stem.
 
         Raises:
-            ValueError: If output_filename is not specified but make_tmp_output_file is True.
-            FileNotFoundError: If input file doesn't exist.
+            ValueError: If output_filename is not specified but make_tmp_output_file is True,
+                since a temporary filename cannot be created without a base filename.
+            FileNotFoundError: If input_path is constructed (both input_dir and input_filename
+                are provided) but the resulting file doesn't exist on the filesystem.
+
+        Examples:
+            >>> io = IOManager(
+            ...     input_dir="data/raw",
+            ...     input_filename="dataset.csv",
+            ...     output_dir="data/processed",
+            ...     output_filename="cleaned_data.csv"
+            ... )
+
+            >>> # Create temporary output file
+            >>> io_tmp = IOManager(
+            ...     output_dir="results",
+            ...     output_filename="report.json",
+            ...     make_tmp_output_file=True
+            ... )  # Will create results/report_tmp.json
         """
         # Convert input parameters to Path objects if they are provided as strings.
         self.input_dir: Optional[Path] = Path(input_dir) if input_dir else None
@@ -157,7 +188,7 @@ class IOManager:
                 output, file, indent=4
             )  # indent=4 makes the file human-readable with nice formatting
 
-    def read_input(self, **kwargs):
+    def read_input(self, **kwargs) -> Any:
         """
         Read the input file based on its extension.
 
@@ -165,7 +196,8 @@ class IOManager:
             **kwargs: Additional arguments passed to the underlying read function
 
         Returns:
-            The contents of the input file
+            Any: The contents of the input file. For CSV and Excel files, returns a pandas DataFrame.
+                For pickle and JSON files, returns the deserialized data.
 
         Raises:
             ValueError: If file extension is not supported
@@ -179,25 +211,28 @@ class IOManager:
             raise ValueError(f"Unsupported file extension: {suffix}")
 
         if suffix == ".pkl":
-            self.read_pickle_file(self.input_path)
+            return self.read_pickle_file(self.input_path)
         if suffix == ".json":
-            self.read_json_file(self.input_path)
+            return self.read_json_file(self.input_path)
         if suffix == ".csv":
             return pd.read_csv(self.input_path, **kwargs)
         if suffix == ".xlsx":
             return pd.read_excel(self.input_path, **kwargs)
 
-    def write_output(self, output, **kwargs) -> None:
+    def write_output(self, output: Any, **kwargs) -> None:
         """
         Write data to the output file based on its extension.
 
         Args:
-            output: Data to write
+            output (Any): Data to write. For CSV and Excel, should be a pandas DataFrame.
+                For JSON, should be a dictionary. For pickle, can be any serializable object.
+                For PNG and PDF, should be an image object with a save method.
             **kwargs: Additional arguments passed to the underlying write function
 
         Raises:
             ValueError: If file extension is not supported
             FileNotFoundError: If output path is not set
+            TypeError: If output is not the correct type for the specified file format
         """
         if not self.output_path:
             raise FileNotFoundError("Output path is not set")
@@ -212,13 +247,13 @@ class IOManager:
 
         if suffix == ".pkl":
             self.write_pickle_file(output, self.output_path)
-        if suffix == ".json":
+        elif suffix == ".json":
             self.write_json_file(output, self.output_path)
-        if suffix == ".csv":
+        elif suffix == ".csv":
             output.to_csv(self.output_path, **kwargs)
-        if suffix == ".xlsx":
+        elif suffix == ".xlsx":
             output.to_excel(self.output_path, **kwargs)
-        if suffix == ".png":
+        elif suffix == ".png":
             output.save(self.output_path, ppi=150)
-        if suffix == ".pdf":
+        elif suffix == ".pdf":
             output.save(self.output_path)
