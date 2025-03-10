@@ -1,9 +1,11 @@
 """Utilities for Altair line plots."""
 
-from typing import Union, Literal
+from typing import Union, Literal, Any
+import numpy as np
 import pandas as pd
 from fredapi import Fred
 import altair as alt
+from altair.utils.schemapi import Undefined
 from functools import lru_cache
 
 from .constants import LEGEND_BOX_ORIENTATIONS
@@ -268,6 +270,8 @@ class LinePlotter:
         axis_title_font_size: int = 20,
         tick_font_size: int = 18,
         x_ticks_angle: int = 0,
+        x_tick_count: Any = Undefined,
+        line_stroke_dash: list[int, int] = [1, 0],
     ):
         """
         Create an Altair line plot from time series data with optional recession bars overlay.
@@ -344,12 +348,12 @@ class LinePlotter:
                 labelAngle=x_ticks_angle,
                 grid=False,
                 labelAlign="center",  # Centers labels under their tick marks
+                tickCount=x_tick_count,
             ),
-            # scale=alt.Scale(nice=True),
         )
 
         # Customize the y-axis
-        yticks = list(range(y_tick_min, y_tick_max + y_tick_step, y_tick_step))
+        yticks = list(np.arange(y_tick_min, y_tick_max + y_tick_step, y_tick_step))
         alt_y = alt.Y(
             "Value:Q",
             scale=alt.Scale(domain=[yticks[0], yticks[-1]]),
@@ -401,7 +405,9 @@ class LinePlotter:
         # clip=True: Clip marks (e.g. lines or points) falling outside specified scale domain
         chart = (
             alt.Chart(df_melted)
-            .mark_line(size=4, clip=True, interpolate="monotone")
+            .mark_line(
+                size=4, clip=True, interpolate="monotone", strokeDash=line_stroke_dash
+            )
             .encode(x=alt_x, y=alt_y, color=alt_color)
         )
 
@@ -566,7 +572,7 @@ class LinePlotter:
         )
 
         # Customize the y-axis
-        yticks = list(range(y_tick_min, y_tick_max + y_tick_step, y_tick_step))
+        yticks = list(np.arange(y_tick_min, y_tick_max + y_tick_step, y_tick_step))
         alt_y_scale = alt.Scale(domain=[yticks[0], yticks[-1]])
         alt_y_axis = alt.Axis(
             values=yticks,
