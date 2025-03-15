@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import altair as alt
-from tswheel.distplot import DistributionPlotter
+from tswheel.viz.distplot import DistributionPlotter
 
 
 # Create a class to store charts across test instances

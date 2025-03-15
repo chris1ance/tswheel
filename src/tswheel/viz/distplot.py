@@ -6,7 +6,7 @@ import altair as alt
 from altair.utils.schemapi import Undefined
 from typing import Literal
 
-from .constants import LEGEND_BOX_ORIENTATIONS
+from ._constants import LEGEND_BOX_ORIENTATIONS
 
 pd.set_option("mode.copy_on_write", True)
 

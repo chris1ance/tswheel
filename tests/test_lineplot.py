@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 import altair as alt
-from tswheel.lineplot import LinePlotter
+from tswheel.viz.lineplot import LinePlotter
 
 
 # Create a class to store charts across test instances
