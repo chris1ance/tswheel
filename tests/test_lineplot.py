@@ -134,9 +134,14 @@ class TestLinePlotter:
 
     def test_line_chart_custom_styling(self, plotter, time_series_data):
         """Test line chart with custom styling options."""
+        # Set custom font sizes
+        plotter.set_title_font_size(20)
+        plotter.set_axis_title_font_size(16)
+        plotter.set_tick_font_size(14)
+
         chart = plotter.make_line_chart(
             data=time_series_data,
-            y_tick_min=-10,
+            y_tick_min=0,
             y_tick_max=10,
             y_tick_step=5,
             series_colors={"Series1": "steelblue", "Series2": "darkred"},
@@ -144,9 +149,6 @@ class TestLinePlotter:
             x_axis_title="Date",
             y_axis_title="Value",
             legend_title="Variables",
-            title_font_size=20,
-            axis_title_font_size=16,
-            tick_font_size=14,
             date_format="%b %Y",
             x_ticks_angle=45,
         )

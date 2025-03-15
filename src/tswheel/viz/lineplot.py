@@ -14,6 +14,10 @@ pd.set_option("mode.copy_on_write", True)
 
 
 class LinePlotter:
+    """
+    A class for creating customized line plots using Altair.
+    """
+
     LEGEND_BOX_ORIENTATIONS = LEGEND_BOX_ORIENTATIONS
 
     def __init__(
@@ -21,19 +25,90 @@ class LinePlotter:
         fred_api_key: str | None = None,
         width: int = 800,
         height: int = 400,
+        title_font_size: int = 24,
+        axis_title_font_size: int = 20,
+        tick_font_size: int = 18,
     ):
+        """
+        Initialize a LinePlotter with specified dimensions, font sizes and FRED API key.
+
+        Parameters:
+        -----------
+        fred_api_key : str | None, default=None
+            API key for accessing FRED data. Required for recession bars.
+        width : int, default=800
+            Width of the plot in pixels.
+        height : int, default=400
+            Height of the plot in pixels.
+        title_font_size : int, default=24
+            Font size for the chart title.
+        axis_title_font_size : int, default=20
+            Font size for the axis titles.
+        tick_font_size : int, default=18
+            Font size for the axis tick labels.
+        """
         self.fred_api_key = fred_api_key
         self.recession_bars_plot = None
         self.width = width
         self.height = height
+        self.title_font_size = title_font_size
+        self.axis_title_font_size = axis_title_font_size
+        self.tick_font_size = tick_font_size
 
     def set_width(self, width: int):
-        """Set the width of the plot."""
+        """
+        Set the width of the plot.
+
+        Parameters:
+        -----------
+        width : int
+            New width value in pixels.
+        """
         self.width = width
 
     def set_height(self, height: int):
-        """Set the height of the plot."""
+        """
+        Set the height of the plot.
+
+        Parameters:
+        -----------
+        height : int
+            New height value in pixels.
+        """
         self.height = height
+
+    def set_title_font_size(self, title_font_size: int):
+        """
+        Set the font size for chart titles.
+
+        Parameters:
+        -----------
+        title_font_size : int
+            New font size for chart titles.
+        """
+        self.title_font_size = title_font_size
+
+    def set_axis_title_font_size(self, axis_title_font_size: int):
+        """
+        Set the font size for axis titles.
+
+        Parameters:
+        -----------
+        axis_title_font_size : int
+            New font size for axis titles.
+        """
+        self.axis_title_font_size = axis_title_font_size
+
+    def set_tick_font_size(self, tick_font_size: int):
+        """
+        Set the font size for axis tick labels.
+
+        Parameters:
+        -----------
+        tick_font_size : int
+            New font size for axis tick labels.
+        """
+        self.tick_font_size = tick_font_size
 
     @lru_cache(maxsize=None)
     def get_recessions(
@@ -266,9 +341,6 @@ class LinePlotter:
         legend_box_orient: Literal[LEGEND_BOX_ORIENTATIONS] = "top-left",
         legend_direction: Literal["horizontal", "vertical"] = "vertical",
         date_format: str = "%Y",
-        title_font_size: int = 24,
-        axis_title_font_size: int = 20,
-        tick_font_size: int = 18,
         x_ticks_angle: int = 0,
         x_tick_count: Any = Undefined,
         line_stroke_dash: list[int, int] = [1, 0],
@@ -305,14 +377,12 @@ class LinePlotter:
             Direction of the legend items. Default: "vertical".
         date_format : str, optional
             Format string for date labels on x-axis. Default: "%Y".
-        title_font_size : int, optional
-            Font size for the chart title. Default: 24.
-        axis_title_font_size : int, optional
-            Font size for axis titles. Default: 20.
-        tick_font_size : int, optional
-            Font size for tick labels. Default: 18.
         x_ticks_angle : int, optional
             Angle for x-axis tick labels in degrees. Default: 0.
+        x_tick_count : Any, optional
+            Number of ticks to show on the x-axis. Default: Undefined.
+        line_stroke_dash : list[int, int], optional
+            Pattern for line stroke dash. Default: [1, 0] (solid line).
 
         Returns:
         --------
@@ -341,10 +411,10 @@ class LinePlotter:
             "date:T",
             axis=alt.Axis(
                 title=x_axis_title,
-                titleFontSize=axis_title_font_size,
+                titleFontSize=self.axis_title_font_size,
                 titleFontWeight="normal",
                 format=date_format,
-                labelFontSize=tick_font_size,
+                labelFontSize=self.tick_font_size,
                 labelAngle=x_ticks_angle,
                 grid=False,
                 labelAlign="center",  # Centers labels under their tick marks
@@ -360,9 +430,9 @@ class LinePlotter:
             axis=alt.Axis(
                 values=yticks,
                 title=y_axis_title,
-                titleFontSize=axis_title_font_size,
+                titleFontSize=self.axis_title_font_size,
                 titleFontWeight="normal",
-                labelFontSize=tick_font_size,
+                labelFontSize=self.tick_font_size,
                 titleAnchor="start",  # Puts y-axis title in bottom left corner of plot
                 titleAngle=0,  # Makes y-axis title horizontal
                 titleY=-10,  # Moves y-axis title up to the upper left corner of plot
@@ -374,9 +444,9 @@ class LinePlotter:
         # Customize series legend
         alt_legend = alt.Legend(
             title=legend_title,
-            titleFontSize=axis_title_font_size,
+            titleFontSize=self.axis_title_font_size,
             titleLimit=0,  # Ensures title is not truncated
-            labelFontSize=axis_title_font_size,
+            labelFontSize=self.axis_title_font_size,
             offset=1,  # Offset in pixels by which to displace the legend from the data rectangle and axes.
             symbolSize=300,  # Length of the variable's stroke in the legend
             symbolStrokeWidth=10,  # Width of the variable's stroke in the legend
@@ -424,7 +494,7 @@ class LinePlotter:
 
         # Customize plot title
         alt_title = alt.TitleParams(
-            text=title, anchor="middle", fontSize=title_font_size
+            text=title, anchor="middle", fontSize=self.title_font_size
         )
         chart = chart.properties(width=self.width, height=self.height, title=alt_title)
 
@@ -445,9 +515,6 @@ class LinePlotter:
         legend_box_orient: Literal[LEGEND_BOX_ORIENTATIONS] = "right",
         legend_direction: Literal["horizontal", "vertical"] = "vertical",
         date_format: str = "%Y",
-        title_font_size: int = 24,
-        axis_title_font_size: int = 20,
-        tick_font_size: int = 18,
         x_ticks_angle: int = 0,
         percentile_type: Literal["25_75", "10_90", "min_max"] = "25_75",
         center_line: Literal["median", "mean", "all", "none"] = "none",
@@ -485,12 +552,6 @@ class LinePlotter:
             Direction of the legend items. Default: "vertical".
         date_format : str, optional
             Format string for date labels on x-axis. Default: "%Y".
-        title_font_size : int, optional
-            Font size for the chart title. Default: 24.
-        axis_title_font_size : int, optional
-            Font size for axis titles. Default: 20.
-        tick_font_size : int, optional
-            Font size for tick labels. Default: 18.
         x_ticks_angle : int, optional
             Angle for x-axis tick labels in degrees. Default: 0.
         percentile_type : Literal["25_75", "10_90", "min_max"], optional
@@ -562,9 +623,9 @@ class LinePlotter:
             "date:T",
             axis=alt.Axis(
                 title=x_axis_title,
-                titleFontSize=axis_title_font_size,
+                titleFontSize=self.axis_title_font_size,
                 format=date_format,
-                labelFontSize=tick_font_size,
+                labelFontSize=self.tick_font_size,
                 labelAngle=x_ticks_angle,
                 grid=False,
                 labelAlign="center",  # Centers labels under their tick marks
@@ -577,8 +638,8 @@ class LinePlotter:
         alt_y_axis = alt.Axis(
             values=yticks,
             title=y_axis_title,
-            titleFontSize=axis_title_font_size,
-            labelFontSize=tick_font_size,
+            titleFontSize=self.axis_title_font_size,
+            labelFontSize=self.tick_font_size,
             titleAnchor="start",  # Puts y-axis title in bottom left corner of plot
             titleAngle=0,  # Makes y-axis title horizontal
             titleY=-10,  # Moves y-axis title up to the upper left corner of plot
@@ -589,8 +650,8 @@ class LinePlotter:
         # Create the area chart
         alt_area_legend = alt.Legend(
             title=legend_title,
-            titleFontSize=axis_title_font_size,
-            labelFontSize=axis_title_font_size,
+            titleFontSize=self.axis_title_font_size,
+            labelFontSize=self.axis_title_font_size,
             offset=1,
             symbolSize=300,
             symbolStrokeWidth=5,
@@ -622,7 +683,7 @@ class LinePlotter:
 
         # Add title and set dimensions
         alt_title = alt.TitleParams(
-            text=title, anchor="middle", fontSize=title_font_size
+            text=title, anchor="middle", fontSize=self.title_font_size
         )
         area_chart = area_chart.properties(
             width=self.width, height=self.height, title=alt_title
