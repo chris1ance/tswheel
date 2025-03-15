@@ -1,4 +1,4 @@
-"""Utilities for Altair histogram plots."""
+"""Utilities for Altair distribution plots."""
 
 import pandas as pd
 import numpy as np
@@ -11,9 +11,9 @@ from .constants import LEGEND_BOX_ORIENTATIONS
 pd.set_option("mode.copy_on_write", True)
 
 
-class HistogramPlotter:
+class DistributionPlotter:
     """
-    A class for creating customized histogram plots using Altair.
+    A class for creating customized distribution plots using Altair.
 
     This class provides methods to create and customize histogram visualizations,
     including options for adding statistical indicators like mean and median lines.

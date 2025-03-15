@@ -1,11 +1,11 @@
-"""Tests for make_boxplot method in tswheel/histplot.py."""
+"""Tests for make_boxplot method in tswheel/distributions.py."""
 
 import os
 import numpy as np
 import pandas as pd
 import pytest
 import altair as alt
-from tswheel.histplot import HistogramPlotter
+from tswheel.distplot import DistributionPlotter
 
 
 # Create a class to store charts across test instances
@@ -43,8 +43,8 @@ def export_all_charts_after_tests(request):
 class TestBoxPlot:
     @pytest.fixture
     def plotter(self):
-        """Create a HistogramPlotter instance."""
-        return HistogramPlotter(width=600, height=300)
+        """Create a DistributionPlotter instance."""
+        return DistributionPlotter(width=600, height=300)
 
     @pytest.fixture
     def single_group_data(self):
