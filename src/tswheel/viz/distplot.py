@@ -6,20 +6,18 @@ import altair as alt
 from altair.utils.schemapi import Undefined
 from typing import Literal
 
-from ._constants import LEGEND_BOX_ORIENTATIONS
+from ._common import BasePlotter
 
 pd.set_option("mode.copy_on_write", True)
 
 
-class DistributionPlotter:
+class DistributionPlotter(BasePlotter):
     """
     A class for creating customized distribution plots using Altair.
 
     This class provides methods to create and customize histogram visualizations,
     including options for adding statistical indicators like mean and median lines.
     """
-
-    LEGEND_BOX_ORIENTATIONS = LEGEND_BOX_ORIENTATIONS
 
     def __init__(
         self,
@@ -30,7 +28,7 @@ class DistributionPlotter:
         tick_font_size: int = 18,
     ):
         """
-        Initialize a HistogramPlotter with specified dimensions and font sizes.
+        Initialize a DistributionPlotter with specified dimensions and font sizes.
 
         Parameters:
         -----------
@@ -45,66 +43,13 @@ class DistributionPlotter:
         tick_font_size : int, default=18
             Font size for the axis tick labels.
         """
-        self.width = width
-        self.height = height
-        self.title_font_size = title_font_size
-        self.axis_title_font_size = axis_title_font_size
-        self.tick_font_size = tick_font_size
-
-    def set_width(self, width: int):
-        """
-        Set the width of the plot.
-
-        Parameters:
-        -----------
-        width : int
-            New width value in pixels.
-        """
-        self.width = width
-
-    def set_height(self, height: int):
-        """
-        Set the height of the plot.
-
-        Parameters:
-        -----------
-        height : int
-            New height value in pixels.
-        """
-        self.height = height
-
-    def set_title_font_size(self, title_font_size: int):
-        """
-        Set the font size for chart titles.
-
-        Parameters:
-        -----------
-        title_font_size : int
-            New font size for chart titles.
-        """
-        self.title_font_size = title_font_size
-
-    def set_axis_title_font_size(self, axis_title_font_size: int):
-        """
-        Set the font size for axis titles.
-
-        Parameters:
-        -----------
-        axis_title_font_size : int
-            New font size for axis titles.
-        """
-        self.axis_title_font_size = axis_title_font_size
-
-    def set_tick_font_size(self, tick_font_size: int):
-        """
-        Set the font size for axis tick labels.
-
-        Parameters:
-        -----------
-        tick_font_size : int
-            New font size for axis tick labels.
-        """
-        self.tick_font_size = tick_font_size
+        super().__init__(
+            width=width,
+            height=height,
+            title_font_size=title_font_size,
+            axis_title_font_size=axis_title_font_size,
+            tick_font_size=tick_font_size,
+        )
 
     def make_vline_plot(
         self,
