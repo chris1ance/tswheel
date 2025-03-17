@@ -67,19 +67,21 @@ class IO:
                 are provided) but the resulting file doesn't exist on the filesystem.
 
         Examples:
-            >>> io = IOManager(
+            >>> io = IO(
             ...     input_dir="data/raw",
             ...     input_filename="dataset.csv",
             ...     output_dir="data/processed",
             ...     output_filename="cleaned_data.csv"
             ... )
+            >>> input = io.read_input()
 
             >>> # Create temporary output file
-            >>> io_tmp = IOManager(
+            >>> io_tmp = IO(
             ...     output_dir="results",
             ...     output_filename="report.json",
             ...     make_tmp_output_file=True
             ... )  # Will create results/report_tmp.json
+            >>> io_tmp.write_output(output)
         """
         # Convert input parameters to Path objects if they are provided as strings.
         self.input_dir: Optional[Path] = Path(input_dir) if input_dir else None
