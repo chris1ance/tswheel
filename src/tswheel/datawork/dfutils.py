@@ -1,5 +1,6 @@
 import pandas as pd
 from .dfchecks import have_same_index_type
+from typing import Literal
 
 pd.set_option("mode.copy_on_write", True)
 
@@ -9,7 +10,7 @@ def merge_on_index(
     right: pd.DataFrame,
     how: str = "inner",
     suffixes: tuple[str, str] = ("_x", "_y"),
-    validate: str | None = None,
+    validate: Literal["1:1", "1:m", "m:1", "m:m"] | None = None,
     indicator: bool = False,
 ) -> pd.DataFrame:
     """
@@ -48,9 +49,22 @@ def merge_on_index(
         ...
         ValueError: Index types differ: DatetimeIndex vs RangeIndex
     """
-    # Check if indices are compatible
-    compatible, message = have_same_index_type(left, right)
 
+    # Check if validation is required - perform basic validation
+    if validate:
+        # For 1:1 validation, check for duplicates in indices
+        if validate == "1:1":
+            if left.index.duplicated().any():
+                raise ValueError(
+                    "Left index contains duplicate entries, validation '1:1' failed"
+                )
+            if right.index.duplicated().any():
+                raise ValueError(
+                    "Right index contains duplicate entries, validation '1:1' failed"
+                )
+
+    # First, validate that the indices are of the same type
+    compatible, message = have_same_index_type(left, right)
     if not compatible:
         raise ValueError(message)
 

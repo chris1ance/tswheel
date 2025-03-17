@@ -77,6 +77,14 @@ def is_valid_quarterly_format(date_string: str) -> bool:
         >>> is_valid_quarterly_format('abc')
         False
     """
+    # Check for None or non-string input
+    if not isinstance(date_string, str):
+        return False
+
+    # Check string length first to avoid IndexError
+    if len(date_string) != 6:
+        return False
+
     is_str = isinstance(date_string, str)
     is_six_chars = len(date_string) == 6
     has_q = date_string[4] == "Q"

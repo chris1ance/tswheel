@@ -30,7 +30,7 @@ def have_same_index_type(
         >>> # Same DatetimeIndex type but different frequency
         >>> df3 = pd.DataFrame(index=pd.date_range('2022-01-01', periods=3, freq='M'))
         >>> have_same_index_type(df1, df3)
-        (False, 'Indices have the same type but different frequencies: D vs M')
+        (False, 'Indices have the same type but different frequencies: <Day> vs <MonthEnd>')
 
         >>> # Different index types
         >>> df4 = pd.DataFrame(index=pd.RangeIndex(start=0, stop=5))
@@ -57,6 +57,7 @@ def have_same_index_type(
             return False, "Indices have the same type but one has undefined frequency"
         # If both have frequency, compare them
         elif freq1 != freq2:
+            # Use string representation of frequency objects for clarity
             return (
                 False,
                 f"Indices have the same type but different frequencies: {freq1} vs {freq2}",
