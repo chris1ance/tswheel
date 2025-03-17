@@ -280,6 +280,8 @@ class DistributionPlotter(BasePlotter):
         show_outliers: bool = True,
         box_width: int = 30,
         median_color: str = "black",
+        median_line_width: int = 2,
+        extent: float = 1.5,
         custom_order: list[str] | None = None,
         y_tick_min: int | float | None = None,
         y_tick_max: int | float | None = None,
@@ -312,6 +314,10 @@ class DistributionPlotter(BasePlotter):
             Width of the box in pixels.
         median_color : str, default="black"
             Color of the median line inside the boxplot.
+        median_line_width : int, default=2
+            Width of the median line inside the boxplot.
+        extent : float, default=1.5
+            How far the whiskers extend from the box as a multiple of the IQR.
         custom_order : list[str] | None, default=None
             Custom order for the categories if group_column is specified.
         y_tick_min : int | float | None, default=None
@@ -419,9 +425,7 @@ class DistributionPlotter(BasePlotter):
         else:
             color_encode = alt.Color(
                 f"{group_column}:N",
-                scale=alt.Scale(
-                    scheme=series_colors if series_colors else "category10"
-                ),
+                scale=alt.Scale(scheme=series_colors if series_colors else "plasma"),
                 legend=None,
             )
 
@@ -431,8 +435,9 @@ class DistributionPlotter(BasePlotter):
             .mark_boxplot(
                 size=box_width,
                 outliers=show_outliers,
-                median={"color": median_color},
+                median={"color": median_color, "strokeWidth": median_line_width},
                 ticks=False,
+                extent=extent,
             )
             .encode(
                 x=x_encode,
