@@ -342,6 +342,36 @@ class LinePlotter(BasePlotter):
           recession periods will be overlaid on the plot.
         - Y-axis gridlines are dashed and dark gray, while x-axis gridlines are disabled.
         - The chart clips any marks that fall outside the specified scale domain.
+
+        Examples:
+        ---------
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>> from tswheel.viz import LinePlotter
+        >>>
+        >>> # Create sample time series data
+        >>> dates = pd.date_range(start='2020-01-01', periods=24, freq='M')
+        >>> data = pd.DataFrame({
+        ...     'date': dates,
+        ...     'Series A': np.sin(np.linspace(0, 4*np.pi, 24)) * 3,
+        ...     'Series B': np.cos(np.linspace(0, 4*np.pi, 24)) * 2
+        ... })
+        >>>
+        >>> # Create a line plot with custom colors
+        >>> plotter = LinePlotter(width=800, height=400)
+        >>> custom_colors = {'Series A': 'steelblue', 'Series B': 'firebrick'}
+        >>> chart = plotter.make_line_chart(
+        ...     data=data,
+        ...     y_tick_min=-4,
+        ...     y_tick_max=4,
+        ...     y_tick_step=1,
+        ...     series_colors=custom_colors,
+        ...     title="Sine and Cosine Waves",
+        ...     x_axis_title="Date",
+        ...     y_axis_title="Value",
+        ...     legend_title="Series",
+        ...     date_format="%b %Y"
+        ... )
         """
 
         _df = self.elicit_date_column(data)
@@ -526,6 +556,42 @@ class LinePlotter(BasePlotter):
         - The opacity of the area is adjusted based on the percentile_type (0.3 for 25_75, 0.15 for others).
         - If center_line is specified, a line chart is overlaid on the area chart.
         - Y-axis gridlines are dashed and dark gray, while x-axis gridlines are disabled.
+
+        Examples:
+        ---------
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>> from tswheel.viz import LinePlotter
+        >>>
+        >>> # Create sample time series data with multiple scenarios
+        >>> dates = pd.date_range(start='2020-01-01', periods=24, freq='M')
+        >>> np.random.seed(42)
+        >>> baseline = np.sin(np.linspace(0, 4*np.pi, 24)) * 3
+        >>> data = pd.DataFrame({
+        ...     'date': dates,
+        ...     'Scenario 1': baseline + np.random.normal(0, 0.5, 24),
+        ...     'Scenario 2': baseline + np.random.normal(0, 0.7, 24),
+        ...     'Scenario 3': baseline + np.random.normal(0, 0.3, 24),
+        ...     'Scenario 4': baseline + np.random.normal(0, 0.6, 24),
+        ...     'Scenario 5': baseline + np.random.normal(0, 0.4, 24)
+        ... })
+        >>>
+        >>> # Create an area chart showing the range of scenarios
+        >>> plotter = LinePlotter(width=800, height=400)
+        >>> chart = plotter.make_area_chart(
+        ...     data=data,
+        ...     area_color='steelblue',
+        ...     y_tick_min=-5,
+        ...     y_tick_max=5,
+        ...     y_tick_step=1,
+        ...     title="Scenario Range Analysis",
+        ...     x_axis_title="Date",
+        ...     y_axis_title="Value",
+        ...     legend_title="Range Type",
+        ...     percentile_type="25_75",
+        ...     center_line="median",
+        ...     date_format="%b %Y"
+        ... )
         """
         _df = self.elicit_date_column(data)
 

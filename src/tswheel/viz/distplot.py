@@ -168,6 +168,28 @@ class DistributionPlotter(BasePlotter):
         --------
         alt.Chart
             An Altair chart object containing the histogram with specified customizations.
+
+        Examples:
+        ---------
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>> from tswheel.viz import DistributionPlotter
+        >>>
+        >>> # Create sample data
+        >>> np.random.seed(42)
+        >>> data = pd.DataFrame({'values': np.random.normal(0, 1, 1000)})
+        >>>
+        >>> # Create a histogram with mean and median lines
+        >>> plotter = DistributionPlotter(width=700, height=400)
+        >>> chart = plotter.make_histogram(
+        ...     data=data,
+        ...     value_column='values',
+        ...     bin_step=0.2,
+        ...     title="Normal Distribution",
+        ...     x_axis_title="Value",
+        ...     show_mean_line=True,
+        ...     show_median_line=True
+        ... )
         """
         # Make a copy of the data to avoid modifying the original
         df = data.copy()
@@ -288,18 +310,10 @@ class DistributionPlotter(BasePlotter):
             Whether to show outlier points outside the whiskers.
         box_width : int, default=30
             Width of the box in pixels.
-        median_color : str, default="red"
+        median_color : str, default="black"
             Color of the median line inside the boxplot.
         custom_order : list[str] | None, default=None
             Custom order for the categories if group_column is specified.
-        legend_title : str, default=""
-            Title for the legend when using multiple colors.
-        legend_box_orient : Literal[LEGEND_BOX_ORIENTATIONS], default="top-left"
-            Position of legend box in plot.
-        legend_direction : Literal["horizontal", "vertical"], default="vertical"
-            Direction of the legend items.
-        add_legend_border : bool, default=True
-            Whether to add a border around the legend.
         y_tick_min : int | float | None, default=None
             Minimum value for y-axis ticks. If None, determined automatically.
         y_tick_max : int | float | None, default=None
@@ -313,6 +327,37 @@ class DistributionPlotter(BasePlotter):
         --------
         alt.Chart
             An Altair chart object containing the boxplot with specified customizations.
+
+        Examples:
+        ---------
+        >>> import pandas as pd
+        >>> import numpy as np
+        >>> from tswheel.viz import DistributionPlotter
+        >>>
+        >>> # Create sample data with multiple groups
+        >>> np.random.seed(42)
+        >>> data = pd.DataFrame({
+        ...     'group': np.repeat(['A', 'B', 'C'], 100),
+        ...     'value': np.concatenate([
+        ...         np.random.normal(0, 1, 100),  # Group A
+        ...         np.random.normal(2, 1.5, 100),  # Group B
+        ...         np.random.normal(-1, 0.5, 100)  # Group C
+        ...     ])
+        ... })
+        >>>
+        >>> # Create a boxplot with custom colors
+        >>> plotter = DistributionPlotter(width=600, height=400)
+        >>> custom_colors = {'A': 'blue', 'B': 'green', 'C': 'orange'}
+        >>> chart = plotter.make_boxplot(
+        ...     data=data,
+        ...     value_column='value',
+        ...     group_column='group',
+        ...     series_colors=custom_colors,
+        ...     title="Distribution by Group",
+        ...     x_axis_title="Group",
+        ...     y_axis_title="Value",
+        ...     median_color="red"
+        ... )
         """
         # Make a copy of the data to avoid modifying the original
         df = data.copy()
