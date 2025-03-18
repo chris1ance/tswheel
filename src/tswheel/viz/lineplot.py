@@ -429,8 +429,8 @@ class LinePlotter(BasePlotter):
             chart += recession_bars_plot
 
         if any([y < 0 for y in yticks]):
-            black_hline_plot = self.make_zero_hline_plot(yticks)
-            chart += black_hline_plot
+            zero_hline_chart = self.make_zero_hline_chart(yticks=yticks)
+            chart += zero_hline_chart
 
         # Customize plot title
         alt_title = alt.TitleParams(

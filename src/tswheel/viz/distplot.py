@@ -447,35 +447,24 @@ class DistributionPlotter(BasePlotter):
         )
 
         # Add zero line if the y-axis range includes both positive and negative values
+        # Case 1: Explicit yticks list that spans zero
         if (
             isinstance(yticks, list)
             and any(y < 0 for y in yticks)
             and any(y > 0 for y in yticks)
         ):
-            zero_line = self.make_zero_hline_plot(yticks)
+            zero_line = self.make_zero_hline_chart(yticks=yticks)
             chart += zero_line
-        elif y_tick_min is not None and y_tick_max is not None:
-            if y_tick_min < 0 < y_tick_max:
-                # If we don't have explicit ticks but the domain spans zero
-                if y_tick_step is not None:
-                    yticks = list(
-                        np.arange(y_tick_min, y_tick_max + y_tick_step, y_tick_step)
-                    )
-                    zero_line = self.make_zero_hline_plot(yticks)
-                    chart += zero_line
-                else:
-                    # Create a simple horizontal line at y=0 without depending on yticks
-                    zero_line = (
-                        alt.Chart(pd.DataFrame({"Value": [0]}))
-                        .mark_rule(color="black", size=3)
-                        .encode(
-                            y=alt.Y(
-                                "Value:Q",
-                                scale=alt.Scale(domain=[y_tick_min, y_tick_max]),
-                            )
-                        )
-                    )
-                    chart += zero_line
+        # Case 2: Min/max values that span zero
+        elif (
+            y_tick_min is not None
+            and y_tick_max is not None
+            and y_tick_min < 0 < y_tick_max
+        ):
+            zero_line = self.make_zero_hline_chart(
+                y_tick_min=y_tick_min, y_tick_max=y_tick_max, y_tick_step=y_tick_step
+            )
+            chart += zero_line
 
         # Set title and dimensions
         alt_title = alt.TitleParams(
