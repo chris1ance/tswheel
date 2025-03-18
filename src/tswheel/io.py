@@ -4,6 +4,8 @@ import pickle
 import pandas as pd
 import json
 
+pd.set_option("mode.copy_on_write", True)
+
 
 class IO:
     """
