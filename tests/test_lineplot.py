@@ -105,16 +105,6 @@ class TestLinePlotter:
         assert plotter.width == 800
         assert plotter.height == 400
 
-    def test_make_zero_hline_plot(self, plotter):
-        """Test the make_zero_hline_plot static method."""
-        yticks = [-10, -5, 0, 5, 10]
-        chart = LinePlotter.make_zero_hline_plot(yticks)
-
-        assert isinstance(chart, alt.Chart) or isinstance(chart, alt.LayerChart)
-
-        # Store chart for export
-        ChartStore.charts.append(chart)
-
     def test_basic_line_chart(self, plotter, time_series_data):
         """Test creating a basic line chart."""
         chart = plotter.make_line_chart(

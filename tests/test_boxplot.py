@@ -54,6 +54,50 @@ class TestBoxPlot:
         return pd.DataFrame({"values": data})
 
     @pytest.fixture
+    def mixed_sign_data(self):
+        """Generate a DataFrame with values crossing zero (both positive and negative)."""
+        np.random.seed(44)
+        data = np.random.normal(loc=0.0, scale=3.0, size=1000)
+        return pd.DataFrame({"values": data})
+
+    @pytest.fixture
+    def negative_data(self):
+        """Generate a DataFrame with only negative values."""
+        np.random.seed(45)
+        data = np.random.normal(loc=-5.0, scale=1.5, size=1000)
+        return pd.DataFrame({"values": data})
+
+    @pytest.fixture
+    def mixed_sign_multi_group_data(self):
+        """Generate a DataFrame with multiple groups with values crossing zero."""
+        np.random.seed(46)
+
+        # Create three groups with different distributions, all crossing zero
+        group_a = np.random.normal(loc=0.0, scale=1.0, size=200)  # centered at zero
+        group_b = np.random.normal(
+            loc=2.0, scale=2.0, size=200
+        )  # mostly positive but some negative
+        group_c = np.random.normal(
+            loc=-2.0, scale=2.0, size=200
+        )  # mostly negative but some positive
+
+        # Combine the data into a DataFrame
+        df = pd.DataFrame(
+            {
+                "values": np.concatenate([group_a, group_b, group_c]),
+                "group": np.concatenate(
+                    [
+                        np.repeat("Group A", 200),
+                        np.repeat("Group B", 200),
+                        np.repeat("Group C", 200),
+                    ]
+                ),
+            }
+        )
+
+        return df
+
+    @pytest.fixture
     def multi_group_data(self):
         """Generate a DataFrame with multiple groups of data."""
         np.random.seed(43)
@@ -255,6 +299,126 @@ class TestBoxPlot:
         )
 
         assert isinstance(chart, alt.Chart)
+
+        # Store chart for global export
+        ChartStore.charts.append(chart)
+
+    def test_y_axis_with_zero_line(self, plotter, mixed_sign_data):
+        """Test boxplot with y-axis range spanning both positive and negative values (should show zero line)."""
+        # Add a dummy group column
+        data = mixed_sign_data.copy()
+        data["group"] = "All Data"
+
+        chart = plotter.make_boxplot(
+            data=data,
+            value_column="values",
+            group_column="group",
+            title="Boxplot with Zero Line",
+            y_tick_min=-6,
+            y_tick_max=6,
+            y_tick_step=2,
+        )
+
+        assert isinstance(chart, alt.Chart) or isinstance(chart, alt.LayerChart)
+
+        # Store chart for global export
+        ChartStore.charts.append(chart)
+
+    def test_y_axis_only_positive(self, plotter, single_group_data):
+        """Test boxplot with y-axis range containing only positive values (no zero line)."""
+        # Add a dummy group column
+        data = single_group_data.copy()
+        data["group"] = "All Data"
+
+        chart = plotter.make_boxplot(
+            data=data,
+            value_column="values",
+            group_column="group",
+            title="Boxplot with Only Positive Values",
+            y_tick_min=2,
+            y_tick_max=10,
+            y_tick_step=2,
+        )
+
+        assert isinstance(chart, alt.Chart) or isinstance(chart, alt.LayerChart)
+
+        # Store chart for global export
+        ChartStore.charts.append(chart)
+
+    def test_y_axis_only_negative(self, plotter, negative_data):
+        """Test boxplot with y-axis range containing only negative values (no zero line)."""
+        # Add a dummy group column
+        data = negative_data.copy()
+        data["group"] = "All Data"
+
+        chart = plotter.make_boxplot(
+            data=data,
+            value_column="values",
+            group_column="group",
+            title="Boxplot with Only Negative Values",
+            y_tick_min=-10,
+            y_tick_max=-2,
+            y_tick_step=2,
+        )
+
+        assert isinstance(chart, alt.Chart) or isinstance(chart, alt.LayerChart)
+
+        # Store chart for global export
+        ChartStore.charts.append(chart)
+
+    def test_min_max_spans_zero_no_step(self, plotter, mixed_sign_data):
+        """Test boxplot with min/max spanning zero but no explicit tick step (should add zero line)."""
+        # Add a dummy group column
+        data = mixed_sign_data.copy()
+        data["group"] = "All Data"
+
+        chart = plotter.make_boxplot(
+            data=data,
+            value_column="values",
+            group_column="group",
+            title="Boxplot with Min/Max Spanning Zero (No Step)",
+            y_tick_min=-5,
+            y_tick_max=5,
+        )
+
+        assert isinstance(chart, alt.Chart) or isinstance(chart, alt.LayerChart)
+
+        # Store chart for global export
+        ChartStore.charts.append(chart)
+
+    def test_min_max_no_zero_span(self, plotter, single_group_data):
+        """Test boxplot with min/max not spanning zero and no explicit tick step (no zero line)."""
+        # Add a dummy group column
+        data = single_group_data.copy()
+        data["group"] = "All Data"
+
+        chart = plotter.make_boxplot(
+            data=data,
+            value_column="values",
+            group_column="group",
+            title="Boxplot with Min/Max Not Spanning Zero",
+            y_tick_min=2,
+            y_tick_max=8,
+        )
+
+        assert isinstance(chart, alt.Chart) or isinstance(chart, alt.LayerChart)
+
+        # Store chart for global export
+        ChartStore.charts.append(chart)
+
+    def test_multi_group_with_zero_line(self, plotter, mixed_sign_multi_group_data):
+        """Test multi-group boxplot with data spanning zero (should show zero line)."""
+        chart = plotter.make_boxplot(
+            data=mixed_sign_multi_group_data,
+            value_column="values",
+            group_column="group",
+            title="Multi-Group Boxplot with Zero Line",
+            y_tick_min=-6,
+            y_tick_max=6,
+            y_tick_step=2,
+        )
+
+        assert isinstance(chart, alt.Chart) or isinstance(chart, alt.LayerChart)
 
         # Store chart for global export
         ChartStore.charts.append(chart)

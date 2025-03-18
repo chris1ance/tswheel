@@ -108,3 +108,40 @@ class BasePlotter:
             New font size for axis tick labels.
         """
         self.tick_font_size = tick_font_size
+
+    def make_zero_hline_plot(self, yticks: list[int | float]):
+        """
+        Create a horizontal line at y=0 for charts that include both positive and negative values.
+
+        Parameters:
+        -----------
+        yticks : list[int | float]
+            List of y-axis tick values that define the plot's y-axis scale domain.
+
+        Returns:
+        --------
+        alt.Chart
+            An Altair chart object containing a black horizontal line at y=0.
+            The line spans the full width of the plot and has a thickness of 3 pixels.
+
+        Notes:
+        ------
+        This function is typically used as an overlay on other charts to clearly demarcate
+        the boundary between positive and negative values.
+        """
+        import pandas as pd
+        import altair as alt
+
+        plot = (
+            alt.Chart(pd.DataFrame({"Value": [0]}))
+            .mark_rule(color="black", size=3)
+            .encode(
+                y=alt.Y(
+                    "Value:Q",
+                    scale=alt.Scale(domain=[yticks[0], yticks[-1]]),
+                    axis=alt.Axis(values=yticks),
+                )
+            )
+        )
+
+        return plot
