@@ -514,6 +514,9 @@ class DistributionPlotter(BasePlotter):
             # Apply faceting with the prepared parameters
             chart = chart.facet(**facet_params)
 
+            if columns is not None:
+                chart = chart.resolve_scale(x="independent")
+
         # Set title
         alt_title = alt.TitleParams(
             text=title, anchor="middle", fontSize=self.title_font_size
