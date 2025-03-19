@@ -277,7 +277,7 @@ class DistributionPlotter(BasePlotter):
         title: str = "",
         x_axis_title: str = "",
         y_axis_title: str = "",
-        show_outliers: bool = True,
+        show_outliers: bool = False,
         box_width: int = 30,
         median_color: str = "black",
         median_line_width: int = 2,
@@ -287,6 +287,9 @@ class DistributionPlotter(BasePlotter):
         y_tick_max: int | float | None = None,
         y_tick_step: int | float | None = None,
         x_ticks_angle: int = 0,
+        facet_column: str | None = None,
+        facet_order: list[str] | None = None,
+        columns: int | None = None,
     ):
         """
         Create an Altair boxplot chart from data.
@@ -308,7 +311,7 @@ class DistributionPlotter(BasePlotter):
             Title for the x-axis.
         y_axis_title : str, default=""
             Title for the y-axis.
-        show_outliers : bool, default=True
+        show_outliers : bool, default=False
             Whether to show outlier points outside the whiskers.
         box_width : int, default=30
             Width of the box in pixels.
@@ -328,6 +331,14 @@ class DistributionPlotter(BasePlotter):
             Step size between y-axis ticks. If None, determined automatically.
         x_ticks_angle : int, default=0
             Angle to rotate x-axis labels.
+        facet_column : str | None, default=None
+            Column name to facet the data by, creating multiple charts.
+            If None, no faceting is applied.
+        facet_order : list[str] | None, default=None
+            Custom order for the facet categories if facet_column is specified.
+        columns : int | None, default=None
+            Maximum number of columns in the faceted layout. If None, Altair
+            will determine the number of columns automatically.
 
         Returns:
         --------
@@ -340,10 +351,11 @@ class DistributionPlotter(BasePlotter):
         >>> import numpy as np
         >>> from tswheel.viz import DistributionPlotter
         >>>
-        >>> # Create sample data with multiple groups
+        >>> # Create sample data with multiple groups and facets
         >>> np.random.seed(42)
         >>> data = pd.DataFrame({
         ...     'group': np.repeat(['A', 'B', 'C'], 100),
+        ...     'facet': np.repeat(['X', 'Y', 'Z', 'W'], 75),
         ...     'value': np.concatenate([
         ...         np.random.normal(0, 1, 100),  # Group A
         ...         np.random.normal(2, 1.5, 100),  # Group B
@@ -351,18 +363,17 @@ class DistributionPlotter(BasePlotter):
         ...     ])
         ... })
         >>>
-        >>> # Create a boxplot with custom colors
+        >>> # Create faceted boxplots with 2 columns
         >>> plotter = DistributionPlotter(width=600, height=400)
-        >>> custom_colors = {'A': 'blue', 'B': 'green', 'C': 'orange'}
         >>> chart = plotter.make_boxplot(
         ...     data=data,
         ...     value_column='value',
         ...     group_column='group',
-        ...     series_colors=custom_colors,
-        ...     title="Distribution by Group",
+        ...     facet_column='facet',
+        ...     columns=2,
+        ...     title="Distribution by Group and Facet",
         ...     x_axis_title="Group",
-        ...     y_axis_title="Value",
-        ...     median_color="red"
+        ...     y_axis_title="Value"
         ... )
         """
         # Make a copy of the data to avoid modifying the original
@@ -446,8 +457,12 @@ class DistributionPlotter(BasePlotter):
             )
         )
 
+        # Set dimensions
+        chart = chart.properties(width=self.width, height=self.height)
+
         # Add zero line if the y-axis range includes both positive and negative values
         # Case 1: Explicit yticks list that spans zero
+        has_zero_line = False
         if (
             isinstance(yticks, list)
             and any(y < 0 for y in yticks)
@@ -455,6 +470,7 @@ class DistributionPlotter(BasePlotter):
         ):
             zero_line = self.make_zero_hline_chart(yticks=yticks)
             chart += zero_line
+            has_zero_line = True
         # Case 2: Min/max values that span zero
         elif (
             y_tick_min is not None
@@ -465,13 +481,45 @@ class DistributionPlotter(BasePlotter):
                 y_tick_min=y_tick_min, y_tick_max=y_tick_max, y_tick_step=y_tick_step
             )
             chart += zero_line
+            has_zero_line = True
 
-        # Set title and dimensions
+        # Apply faceting if a facet column is provided
+        if facet_column:
+            # Create a sort parameter for facet order if provided
+            sort_param = facet_order if facet_order else Undefined
+
+            # Prepare common facet parameters
+            facet_params = {
+                "facet": alt.Facet(
+                    f"{facet_column}:N",
+                    sort=sort_param,
+                    title="",
+                    header=alt.Header(
+                        titleFontSize=self.axis_title_font_size,
+                        labelFontSize=self.tick_font_size,
+                    ),
+                )
+            }
+
+            # Add optional parameters only when they are specified
+            if columns is not None:
+                facet_params["columns"] = columns
+
+            # For layered charts (when zero line is added), we need to pass the data explicitly
+            # to avoid Altair error: "Facet charts require data to be specified at the top level"
+            if has_zero_line:
+                # Include data parameter for layered charts
+                facet_params["data"] = df
+
+            # Apply faceting with the prepared parameters
+            chart = chart.facet(**facet_params)
+
+        # Set title
         alt_title = alt.TitleParams(
             text=title, anchor="middle", fontSize=self.title_font_size
         )
 
-        chart = chart.properties(width=self.width, height=self.height, title=alt_title)
+        chart = chart.properties(title=alt_title)
 
         return chart
 
