@@ -4,6 +4,8 @@ from typing import List, Tuple, Dict
 from sklearn.base import BaseEstimator
 from sktime.transformations.series.lag import Lag
 
+pd.set_option("mode.copy_on_write", True)
+
 
 class DirectForecaster:
     """

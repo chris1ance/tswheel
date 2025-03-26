@@ -2,7 +2,9 @@
 
 from fredapi import Fred
 import pandas as pd
-from .datavalidation import is_valid_date_format
+from .datawork.strchecks import is_valid_date_format
+
+pd.set_option("mode.copy_on_write", True)
 
 
 def get_fred_series(
