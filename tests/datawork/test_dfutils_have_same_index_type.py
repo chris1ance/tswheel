@@ -1,5 +1,5 @@
 import pandas as pd
-from tswheel.datawork.dfchecks import have_same_index_type
+from tswheel.datawork.dfutils import have_same_index_type
 
 
 class TestHaveSameIndexType:
