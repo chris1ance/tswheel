@@ -1,11 +1,32 @@
 import pandas as pd
 import collections.abc
-from typing import Optional, Dict, Union  # Add Union, Iterable
+from typing import Optional, Dict, Union, TypeAlias
+
+
+# --- Type Aliases for Clarity ---
+
+FilterValue: TypeAlias = Union[str, int, collections.abc.Iterable]
+"""Type alias for acceptable filter values: a single string/int or an iterable."""
+
+FilterDict: TypeAlias = Dict[str, FilterValue]
+"""Type alias for a dictionary mapping column names to filter values."""
+
+DataFrameDict: TypeAlias = Dict[str, pd.DataFrame]
+"""Type alias for a dictionary mapping string labels to DataFrames."""
+
+CaseFilterDict: TypeAlias = Dict[str, FilterDict]
+"""Type alias for a dictionary mapping DataFrame labels to their specific filter dicts within a case."""
+
+MetaFilterConfig: TypeAlias = Dict[str, CaseFilterDict]
+"""Type alias for the nested dictionary structure defining metafiltering cases and their filters."""
+
+MetaFilterResult: TypeAlias = Dict[str, Dict[str, pd.DataFrame]]
+"""Type alias for the nested dictionary structure returned by metafilter_df."""
 
 
 def filter_df(
     df: pd.DataFrame,
-    filters: Dict[str, Union[str, int, collections.abc.Iterable]],
+    filters: FilterDict,
     label: Optional[str] = None,
 ) -> pd.DataFrame:
     """
@@ -18,11 +39,10 @@ def filter_df(
 
     Args:
         df (pd.DataFrame): The input DataFrame to be filtered.
-        filters (Dict[str, Union[str, int, collections.abc.Iterable]]):
+        filters (FilterDict):
             A dictionary defining the filtering criteria.
             Keys are column names (str) present in `df`.
-            Values specify the criteria for filtering the corresponding column.
-            Values can be:
+            Values (FilterValue) specify the criteria for filtering:
             - A single string or integer to match exactly.
             - An iterable (like list, tuple, set) of strings or integers
               for matching any value within the iterable.
@@ -38,8 +58,8 @@ def filter_df(
 
     Raises:
         TypeError: If `df` is not a pandas DataFrame, `filters` is not a dictionary,
-                   filter values are not of the expected types (str, int, iterable),
-                   or `label` is provided but is not a string.
+                   filter values do not conform to FilterValue, or `label` is
+                   provided but is not a string.
         ValueError: If a column specified in `filters` does not exist in `df`,
                     or if applying any filter step results in an empty DataFrame.
 
@@ -58,7 +78,7 @@ def filter_df(
         4     Y      2     50
 
         >>> # Basic filtering with a single value
-        >>> filters1 = {'col_a': 'X'}
+        >>> filters1: FilterDict = {'col_a': 'X'}
         >>> summary1 = filter_df(df, filters1, label='Filter_X')
         >>> print(summary1)
                    col_a                 result
@@ -71,7 +91,7 @@ def filter_df(
         2     X      3     30
 
         >>> # Filtering with multiple values and a label
-        >>> filters2 = {'col_a': ['X', 'Y'], 'col_b': 2}
+        >>> filters2: FilterDict = {'col_a': ['X', 'Y'], 'col_b': 2}
         >>> summary2 = filter_df(df, filters2, label='Filter_XY_B2')
         >>> print(summary2)
                      col_a  col_b                result
@@ -91,7 +111,7 @@ def filter_df(
         Filtering on column 'col_a' with values ['NonExistent'] resulted in an empty DataFrame. No data matches the specified filter criteria.
 
         >>> # Example handling empty filters dictionary
-        >>> empty_filters = {}
+        >>> empty_filters: FilterDict = {}
         >>> result_empty = filter_df(df, empty_filters)
         Warning: 'filters' dictionary is empty. Returning input 'df' unchanged.
         >>> print(result_empty)
@@ -167,9 +187,9 @@ def filter_df(
 
 
 def metafilter_df(
-    dfs: Dict[str, pd.DataFrame],
-    filters: Dict[str, Dict[str, Dict[str, Union[str, int, collections.abc.Iterable]]]],
-) -> Dict[str, Dict[str, pd.DataFrame]]:
+    dfs: DataFrameDict,
+    filters: MetaFilterConfig,
+) -> MetaFilterResult:
     """
     Applies multiple sets of filters across multiple DataFrames based on cases.
 
@@ -180,48 +200,42 @@ def metafilter_df(
     dictionary.
 
     Args:
-        dfs (Dict[str, pd.DataFrame]): A dictionary where keys are string labels
+        dfs (DataFrameDict): A dictionary where keys are string labels
             (e.g., "df1", "sales_data") and values are the corresponding
             pandas DataFrames to be filtered.
-        filters (Dict[str, Dict[str, Dict[str, Union[str, int, collections.abc.Iterable]]]]):
+        filters (MetaFilterConfig):
             A nested dictionary defining the filtering operations for different cases.
-            - Outer keys: String labels for each case (e.g., "HighValue_Customers", "Region_A").
-            - Intermediate keys: String labels matching the keys in the `dfs` dictionary
-              (e.g., "df1", "sales_data"), indicating which DataFrame the filters apply to.
-            - Inner values: Filter dictionaries, structured identically to the
-              `filters` argument in the `filter_df` function, specifying the
-              actual filtering criteria for the respective DataFrame within that case.
+            Structure: {case_label: {df_label: {column_name: filter_value}}}
+            - Outer keys (str): Labels for each case (e.g., "HighValue_Customers").
+            - Intermediate keys (str): Labels matching keys in `dfs`, indicating
+              which DataFrame the filters apply to (e.g., "sales_data").
+            - Inner values (FilterDict): Filter dictionaries for `filter_df`.
+
             Example:
             {
                 "case1": {
-                    "df1": {"col_a": "X"},
-                    "df2": {"col_b": [1, 2]},
+                    "df1": {"col_a": "X"},        # FilterDict for df1
+                    "df2": {"col_b": [1, 2]},    # FilterDict for df2
                 },
                 "case2": {
-                    "df1": {"col_c": "Y"},
+                    "df1": {"col_c": "Y"},        # FilterDict for df1
                 }
             }
 
     Returns:
-        Dict[str, Dict[str, pd.DataFrame]]: A nested dictionary containing the results.
-            - Outer keys: Case labels from the input `filters` dictionary.
-            - Inner keys: DataFrame labels corresponding to the DataFrames filtered
+        MetaFilterResult: A nested dictionary containing the results.
+            Structure: {case_label: {df_label: summary_dataframe}}
+            - Outer keys: Case labels from the input `filters`.
+            - Inner keys: DataFrame labels corresponding to DataFrames filtered
               within that case.
-            - Inner values: The summary DataFrames returned by `filter_df` for
-              each specific DataFrame and filter set within the case. Each summary
-              DataFrame has the case label as its index. If `filters` is empty,
-              an empty dictionary is returned.
+            - Inner values: Summary DataFrames from `filter_df` for each filter operation.
+            If `filters` is empty, an empty dictionary is returned.
 
     Raises:
-        TypeError: If `dfs` is not a dictionary, its values are not pandas DataFrames,
-                   `filters` is not a dictionary, outer keys in `filters` are not
-                   strings, intermediate keys are not strings, or intermediate
-                   values are not dictionaries. Also propagates TypeErrors from
-                   `filter_df`.
-        ValueError: If an intermediate key (DataFrame label) in `filters` does not
-                    exist as a key in `dfs`. Also propagates ValueErrors from
-                    `filter_df` (e.g., column not found, filter results in
-                    empty DataFrame).
+        TypeError: If `dfs` or `filters` have incorrect types or structures, or
+                   if propagated from `filter_df`.
+        ValueError: If a DataFrame label in `filters` doesn't exist in `dfs`, or
+                    if propagated from `filter_df`.
 
     Examples:
         >>> import pandas as pd
@@ -238,7 +252,7 @@ def metafilter_df(
         >>> dfs_input = {"sales": df_sales, "customers": df_customers}
 
         >>> # Define filters for different cases across the DataFrames
-        >>> filter_config = {
+        >>> filter_config: MetaFilterConfig = {
         ...     "North_Region": {
         ...         "sales": {"Region": "North"},
         ...         "customers": {"Region": "North"}
@@ -253,7 +267,7 @@ def metafilter_df(
         ... }
 
         >>> # Apply the metafilters
-        >>> results = metafilter_df(dfs_input, filter_config)
+        >>> results: MetaFilterResult = metafilter_df(dfs_input, filter_config)
 
         >>> # Explore results for "North_Region" case
         >>> print("--- Case: North_Region ---")
@@ -297,13 +311,13 @@ def metafilter_df(
         False
 
         >>> # Example with empty filters
-        >>> empty_filters_config = {}
-        >>> empty_results = metafilter_df(dfs_input, empty_filters_config)
+        >>> empty_filters_config: MetaFilterConfig = {}
+        >>> empty_results: MetaFilterResult = metafilter_df(dfs_input, empty_filters_config)
         >>> print(empty_results)
         {}
 
         >>> # Example raising ValueError (df label mismatch)
-        >>> invalid_filter_config = {"Bad_Case": {"non_existent_df": {"col": "val"}}}
+        >>> invalid_filter_config: MetaFilterConfig = {"Bad_Case": {"non_existent_df": {"col": "val"}}}
         >>> try:
         ...     metafilter_df(dfs_input, invalid_filter_config)
         ... except ValueError as e:
@@ -353,7 +367,7 @@ def metafilter_df(
                 )
 
     # --- Apply Filters per Case and DataFrame ---
-    outputs: Dict[str, Dict[str, pd.DataFrame]] = {}
+    outputs: MetaFilterResult = {}
 
     for case_label, case_filters in filters.items():
         case_outputs: Dict[str, pd.DataFrame] = {}
