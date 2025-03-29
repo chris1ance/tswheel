@@ -7,6 +7,7 @@ from tswheel.datawork.metafilter import (
     FilterDict,
     DataFrameDict,
     MetaFilterConfig,
+    PostFilterFuncDict,
 )
 
 
@@ -294,3 +295,166 @@ class TestMetaFilterDF:
         with pytest.raises(ValueError) as excinfo:
             metafilter_df(sample_dfs, filters)
         assert "empty DataFrame" in str(excinfo.value)
+
+    def test_post_filter_funcs_basic(self, sample_dfs):
+        """Test basic functionality of post_filter_funcs parameter."""
+
+        # Define a simple post-filter function
+        def add_count_column(summary_df: pd.DataFrame) -> pd.DataFrame:
+            # Create a new DataFrame with summary info
+            case_label = summary_df.index[0]
+            filtered_df = summary_df.loc[case_label, "result"]
+            return pd.DataFrame({"case": [case_label], "row_count": [len(filtered_df)]})
+
+        # Define filters and post-filter functions
+        filters: MetaFilterConfig = {"North_Region": {"sales": {"region": "North"}}}
+        post_funcs: PostFilterFuncDict = {"sales": add_count_column}
+
+        # Run metafilter_df with post_filter_funcs
+        result = metafilter_df(sample_dfs, filters, post_filter_funcs=post_funcs)
+
+        # Check that post-filter function was applied
+        assert "result_post_filter_func" in result["North_Region"]["sales"].columns
+        post_result = result["North_Region"]["sales"].loc[
+            "North_Region", "result_post_filter_func"
+        ]
+
+        # Verify post-filter result
+        assert isinstance(post_result, pd.DataFrame)
+        assert "case" in post_result.columns
+        assert "row_count" in post_result.columns
+        assert post_result.iloc[0]["case"] == "North_Region"
+        assert (
+            post_result.iloc[0]["row_count"] == 2
+        )  # Should be 2 rows with region 'North'
+
+    def test_post_filter_funcs_multiple(self, sample_dfs):
+        """Test post_filter_funcs with multiple DataFrames and functions."""
+
+        # Define post-filter functions for different DataFrames
+        def summarize_sales(summary_df: pd.DataFrame) -> pd.DataFrame:
+            case_label = summary_df.index[0]
+            filtered_df = summary_df.loc[case_label, "result"]
+            return pd.DataFrame(
+                {
+                    "total_sales": [filtered_df["sales"].sum()],
+                    "avg_sales": [filtered_df["sales"].mean()],
+                }
+            )
+
+        def summarize_customers(summary_df: pd.DataFrame) -> pd.DataFrame:
+            case_label = summary_df.index[0]
+            filtered_df = summary_df.loc[case_label, "result"]
+            return pd.DataFrame(
+                {
+                    "active_count": [filtered_df["active"].sum()],
+                    "total_count": [len(filtered_df)],
+                }
+            )
+
+        # Define filters and post-filter functions
+        filters: MetaFilterConfig = {
+            "North_Region": {
+                "sales": {"region": "North"},
+                "customers": {"region": "North"},
+            }
+        }
+        post_funcs: PostFilterFuncDict = {
+            "sales": summarize_sales,
+            "customers": summarize_customers,
+        }
+
+        # Run metafilter_df with post_filter_funcs
+        result = metafilter_df(sample_dfs, filters, post_filter_funcs=post_funcs)
+
+        # Check sales post-filter result
+        sales_post = result["North_Region"]["sales"].loc[
+            "North_Region", "result_post_filter_func"
+        ]
+        assert "total_sales" in sales_post.columns
+        assert "avg_sales" in sales_post.columns
+
+        # Check customers post-filter result
+        customers_post = result["North_Region"]["customers"].loc[
+            "North_Region", "result_post_filter_func"
+        ]
+        assert "active_count" in customers_post.columns
+        assert "total_count" in customers_post.columns
+
+        # Verify specific values
+        assert (
+            sales_post.iloc[0]["total_sales"] == 2500
+        )  # Sum of sales for North region
+        assert customers_post.iloc[0]["total_count"] == 2  # 2 customers in North region
+
+    def test_post_filter_funcs_partial(self, sample_dfs):
+        """Test post_filter_funcs with function for only some DataFrames."""
+
+        # Define post-filter function only for sales
+        def summarize_sales(summary_df: pd.DataFrame) -> pd.DataFrame:
+            case_label = summary_df.index[0]
+            filtered_df = summary_df.loc[case_label, "result"]
+            return pd.DataFrame({"total_sales": [filtered_df["sales"].sum()]})
+
+        # Define filters for both DataFrames but post-filter only for sales
+        filters: MetaFilterConfig = {
+            "North_Region": {
+                "sales": {"region": "North"},
+                "customers": {"region": "North"},
+            }
+        }
+        post_funcs: PostFilterFuncDict = {"sales": summarize_sales}
+
+        # Run metafilter_df with post_filter_funcs
+        result = metafilter_df(sample_dfs, filters, post_filter_funcs=post_funcs)
+
+        # Check that post-filter was applied only to sales
+        assert "result_post_filter_func" in result["North_Region"]["sales"].columns
+        assert (
+            "result_post_filter_func" not in result["North_Region"]["customers"].columns
+        )
+
+    def test_error_invalid_post_filter_funcs_type(self, sample_dfs):
+        """Test error when post_filter_funcs is not a dictionary."""
+        filters: MetaFilterConfig = {"North_Region": {"sales": {"region": "North"}}}
+
+        # post_filter_funcs must be a dictionary or None
+        with pytest.raises(TypeError) as excinfo:
+            metafilter_df(sample_dfs, filters, post_filter_funcs="not_a_dict")
+        assert "must be a dictionary or None" in str(excinfo.value)
+
+    def test_error_post_filter_func_not_callable(self, sample_dfs):
+        """Test error when a post-filter function is not callable."""
+        filters: MetaFilterConfig = {"North_Region": {"sales": {"region": "North"}}}
+
+        # Values in post_filter_funcs must be callable
+        post_funcs: PostFilterFuncDict = {"sales": "not_callable"}
+        with pytest.raises(TypeError) as excinfo:
+            metafilter_df(sample_dfs, filters, post_filter_funcs=post_funcs)
+        assert "must be callable" in str(excinfo.value)
+
+    def test_error_post_filter_func_wrong_return_type(self, sample_dfs):
+        """Test error when a post-filter function returns non-DataFrame."""
+
+        def wrong_return_type(_: pd.DataFrame) -> str:
+            return "not a DataFrame"
+
+        filters: MetaFilterConfig = {"North_Region": {"sales": {"region": "North"}}}
+        post_funcs: PostFilterFuncDict = {"sales": wrong_return_type}
+
+        with pytest.raises(TypeError) as excinfo:
+            metafilter_df(sample_dfs, filters, post_filter_funcs=post_funcs)
+        assert "must return a pandas DataFrame" in str(excinfo.value)
+
+    def test_post_filter_func_exception_handling(self, sample_dfs):
+        """Test error propagation from post-filter function."""
+
+        def failing_func(_: pd.DataFrame) -> pd.DataFrame:
+            raise ValueError("Intentional error in post-filter function")
+
+        filters: MetaFilterConfig = {"North_Region": {"sales": {"region": "North"}}}
+        post_funcs: PostFilterFuncDict = {"sales": failing_func}
+
+        with pytest.raises(ValueError) as excinfo:
+            metafilter_df(sample_dfs, filters, post_filter_funcs=post_funcs)
+        assert "Intentional error in post-filter function" in str(excinfo.value)
