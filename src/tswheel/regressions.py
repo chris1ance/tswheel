@@ -1,11 +1,12 @@
 import pandas as pd
 import numpy as np
 import statsmodels.api as sm
-from typing import Optional, Any
+import statsmodels.stats.diagnostic as smd
+from typing import Any
 from .datawork.dfutils import have_same_index_type
 
 
-class tsOLS:
+class TSOLS:
     """
     A wrapper class for statsmodels OLS regression using pandas DataFrames/Series.
 
@@ -167,6 +168,34 @@ class tsOLS:
         """
         return pd.Series(self.results.resid, index=self._y.index)
 
+    def get_fitted_values(self) -> pd.Series:
+        """
+        Returns the fitted values from the OLS regression model.
+
+        Fitted values are the values predicted by the model using the fitted parameters
+        on the training data `_X`. They represent the "explained" component of the
+        dependent variable. The returned Series is indexed according to `_y`.
+
+        Returns:
+            pd.Series: A pandas Series containing the fitted values, indexed the same as `_y`
+
+        Examples:
+            >>> # Assuming ols_pd is an initialized tsOLS instance from the __init__ example
+            >>> fitted = ols_pd.get_fitted_values()
+            >>> print(fitted.head().round(4)) # Note: index matches original y
+            2023-01-01    1.1133
+            2023-01-02    1.0011
+            2023-01-03    0.9119
+            2023-01-04    1.1017
+            2023-01-05    1.3117
+            Freq: D, dtype: float64
+            >>> # Verify that residuals + fitted values = original data
+            >>> y_reconstructed = fitted + ols_pd.get_residuals()
+            >>> print(((y_reconstructed - ols_pd._y).abs() < 1e-10).all())
+            True
+        """
+        return pd.Series(self.results.fittedvalues, index=self._y.index)
+
     def get_r2(self, adjusted: bool = False) -> float:
         """
         Returns the R-squared or adjusted R-squared value of the fitted model.
@@ -228,42 +257,32 @@ class tsOLS:
         )
         return summary_df
 
-    def get_fvalue(self) -> float:
+    def get_ftest_results(self) -> dict[str, float]:
         """
-        Returns the F-statistic value for the overall model significance test.
+        Returns the F-statistic and its p-value for the overall model significance test.
 
         The F-statistic tests the hypothesis that all regression coefficients (excluding
-        the intercept) are simultaneously equal to zero.
+        the intercept) are simultaneously equal to zero. The p-value indicates the
+        probability of observing the calculated F-statistic (or a more extreme value)
+        if the null hypothesis (all coefficients are zero) were true.
 
         Returns:
-            float: The F-statistic value.
+            dict[str, float]: A dictionary containing:
+                            'fvalue': The F-statistic value
+                            'pvalue': The p-value for the F-statistic
 
         Examples:
             >>> # Assuming ols_pd is an initialized tsOLS instance from the __init__ example
-            >>> fval = ols_pd.get_fvalue()
-            >>> print(f"{fval:.4f}")
-            43.2918
+            >>> ftest = ols_pd.get_ftest_results()
+            >>> print(f"F-statistic: {ftest['fvalue']:.4f}")
+            F-statistic: 43.2918
+            >>> print(f"p-value: {ftest['pvalue']:.4e}")
+            p-value: 1.0011e-13
         """
-        return float(self.results.fvalue)
-
-    def get_f_pvalue(self) -> float:
-        """
-        Returns the p-value associated with the F-statistic.
-
-        This p-value indicates the probability of observing the calculated F-statistic
-        (or a more extreme value) if the null hypothesis (all coefficients are zero)
-        were true.
-
-        Returns:
-            float: The p-value for the F-statistic.
-
-        Examples:
-            >>> # Assuming ols_pd is an initialized tsOLS instance from the __init__ example
-            >>> fpval = ols_pd.get_f_pvalue()
-            >>> print(f"{fpval:.4e}")
-            1.0011e-13
-        """
-        return float(self.results.f_pvalue)
+        return {
+            "fvalue": float(self.results.fvalue),
+            "pvalue": float(self.results.f_pvalue),
+        }
 
     def summary(self) -> Any:
         """
@@ -283,7 +302,105 @@ class tsOLS:
         """
         return self.results.summary()
 
-    def predict(self, exog: Optional[pd.DataFrame] = None, **kwargs: Any) -> pd.Series:
+    def test_breusch_godfrey(self, nlags: int | None = None) -> dict[str, float]:
+        """
+        Performs Breusch-Godfrey test for residual autocorrelation.
+
+        This method tests the null hypothesis of no serial correlation in the residuals
+        up to order 'nlags'. It returns only the p-values from both the Lagrange Multiplier
+        and F-test versions of the test.
+
+        Args:
+            nlags (int | None): Number of lags to include in the auxiliary regression.
+                               If None, an appropriate lag length is selected.
+
+        Returns:
+            dict[str, float]: A dictionary containing the p-values:
+                             'lmpval': p-value for the Lagrange Multiplier test
+                             'fpval': p-value for the F-test
+
+        Examples:
+            >>> # Assuming ols_pd is an initialized tsOLS instance
+            >>> result = ols_pd.test_breusch_godfrey(nlags=4)
+            >>> print(f"LM test p-value: {result['lmpval']:.4f}")
+            >>> print(f"F test p-value: {result['fpval']:.4f}")
+        """
+        # --- Input Validation ---
+        if nlags is not None and not isinstance(nlags, int):
+            raise TypeError(f"nlags must be an integer or None, got {type(nlags)}")
+
+        if nlags is not None and nlags <= 0:
+            raise ValueError(f"nlags must be positive, got {nlags}")
+
+        # --- Perform Breusch-Godfrey Test ---
+        # If nlags is None, use a default based on sample size
+        if nlags is None:
+            T = len(self._y)
+            nlags = min(int(np.ceil(np.sqrt(T))), int(T / 5))  # Common rule of thumb
+
+        # Run the Breusch-Godfrey test
+        _, lmpval, _, fpval, _ = smd.acorr_breusch_godfrey(self.results, nlags=nlags)
+
+        return {"lmpval": float(lmpval), "fpval": float(fpval)}
+
+    def test_coefficient_restrictions(self, hypotheses: list[str]) -> dict[str, float]:
+        """
+        Performs an F-test for linear restrictions on coefficients.
+
+        This method tests joint linear hypotheses about model coefficients using the
+        F-test functionality from statsmodels. The hypotheses are specified as strings
+        that represent linear constraints.
+
+        Args:
+            hypotheses (list[str]): List of strings representing linear hypotheses to test.
+                                  Each string should be a valid linear constraint on the
+                                  coefficients, such as 'x1 = 0', 'x1 + x2 = 0', 'x1 = x2', etc.
+                                  Variable names must match the column names in the model.
+
+        Returns:
+            dict[str, float]: A dictionary containing:
+                             'fstat': The F-statistic for the joint hypothesis test
+                             'pvalue': The p-value associated with the F-statistic
+
+        Raises:
+            ValueError: If the hypotheses list is empty or contains invalid constraints.
+
+        Examples:
+            >>> # Assuming ols_pd is an initialized tsOLS instance with variables 'x1' and 'x2'
+            >>> # Test if coefficients of x1 and x2 are both zero
+            >>> restrictions = ['x1 = 0', 'x2 = 0']
+            >>> result = ols_pd.test_coefficient_restrictions(restrictions)
+            >>> print(f"F-statistic: {result['fstat']:.4f}")
+            >>> print(f"p-value: {result['pvalue']:.4e}")
+            >>>
+            >>> # Test if the coefficient of x1 equals the coefficient of x2
+            >>> result = ols_pd.test_coefficient_restrictions(['x1 = x2'])
+            >>> print(f"F-statistic: {result['fstat']:.4f}")
+            >>> print(f"p-value: {result['pvalue']:.4e}")
+        """
+        # --- Input Validation ---
+        if not hypotheses:
+            raise ValueError("The hypotheses list cannot be empty")
+
+        if not isinstance(hypotheses, list) or not all(
+            isinstance(h, str) for h in hypotheses
+        ):
+            raise TypeError("hypotheses must be a list of strings")
+
+        # --- Perform F-test ---
+        try:
+            ftest_result = self.results.f_test(hypotheses)
+            return {
+                "fstat": float(ftest_result.statistic),
+                "pvalue": float(ftest_result.pvalue),
+            }
+        except Exception as e:
+            raise ValueError(
+                f"Error performing F-test: {str(e)}. Check that variable names "
+                f"in hypotheses match column names in the model: {list(self._X.columns)}"
+            )
+
+    def predict(self, exog: pd.DataFrame, **kwargs: Any) -> pd.Series:
         """
         Generates predictions using the fitted model.
 
@@ -292,24 +409,21 @@ class tsOLS:
         provided `exog` DataFrame if it doesn't already exist.
 
         Args:
-            exog (Optional[pd.DataFrame]): The exogenous variables (features) for which
-                to generate predictions. Must be a pandas DataFrame. If the model includes
-                an intercept, `exog` should contain columns matching the original non-constant
+            exog (pd.DataFrame): The exogenous variables (features) for which
+                to generate predictions. Must be a pandas DataFrame. `exog` should
+                contain columns matching the original non-constant
                 features used for training. A constant column will be added automatically if
-                missing. If None, uses the internal training data `_X` to generate
-                in-sample predictions on the data used for fitting.
+                missing.
             **kwargs: Additional keyword arguments passed to the statsmodels predict method.
 
         Returns:
-            pd.Series: The predicted values. If `exog` is provided, the index matches
-                       `exog`. If `exog` is None, the index matches the internal
-                       cleaned data `_X`.
+            pd.Series: The predicted values. The index matches `exog`.
 
         Raises:
             ValueError: If the provided `exog` (after potentially adding a constant)
                         has a different set of columns than the internal training data `_X`,
                         or if columns cannot be aligned.
-            TypeError: If the provided `exog` is not a pandas DataFrame (and not None).
+            TypeError: If the provided `exog` is not a pandas DataFrame.
 
         Examples:
             >>> # Assuming ols_pd is an initialized tsOLS instance from the __init__ example
@@ -330,49 +444,32 @@ class tsOLS:
             2024-01-01    0.1019
             2024-01-02    0.1784
             dtype: float64
-            >>>
-            >>> # In-sample predictions (on the cleaned data _X used for fitting)
-            >>> in_sample_preds = ols_pd.predict()
-            >>> print(in_sample_preds.shape) # Matches shape of _X and _y
-            (98,)
-            >>> print(in_sample_preds.head().round(4)) # Index matches _X
-            2023-01-01    1.1133
-            2023-01-02    1.0011
-            2023-01-03    0.9119
-            2023-01-04    1.1017
-            2023-01-05    1.3117
-            Freq: D, dtype: float64
         """
-        if exog is None:
-            _exog = self._X.copy()  # Use the internal, cleaned training data
-        else:
-            if not isinstance(exog, pd.DataFrame):
-                raise TypeError(
-                    f"Expected exog to be None or a pandas DataFrame, but got {type(exog)}"
+        if not isinstance(exog, pd.DataFrame):
+            raise TypeError(
+                f"Expected exog to be a pandas DataFrame, but got {type(exog)}"
+            )
+
+        _exog = exog.copy()  # Work on a copy
+
+        # Automatically add constant if model has intercept and 'const' is missing
+        if self.has_intercept and "const" not in _exog.columns:
+            _exog = sm.add_constant(_exog, prepend=True, has_constant="skip")
+
+        # Check feature consistency (column names and order might matter for statsmodels)
+        if not self._X.columns.equals(_exog.columns):
+            # Consider a more robust check if column order isn't guaranteed
+            if set(self._X.columns) != set(_exog.columns):
+                raise ValueError(
+                    "Prediction exog columns (after adding constant if needed) do not match "
+                    f"training X columns. Expected: {list(self._X.columns)}, "
+                    f"Got: {list(_exog.columns)}"
                 )
+            else:
+                # Reorder columns if they are just in a different order
+                try:
+                    _exog = _exog[self._X.columns]
+                except Exception as e:
+                    raise ValueError(f"Error aligning prediction exog columns: {e}")
 
-            _exog = exog.copy()  # Work on a copy
-
-            # Automatically add constant if model has intercept and 'const' is missing
-            if self.has_intercept and "const" not in _exog.columns:
-                _exog = sm.add_constant(_exog, prepend=True, has_constant="skip")
-
-            # Check feature consistency (column names and order might matter for statsmodels)
-            if not self._X.columns.equals(_exog.columns):
-                # Consider a more robust check if column order isn't guaranteed
-                if set(self._X.columns) != set(_exog.columns):
-                    raise ValueError(
-                        "Prediction exog columns (after adding constant if needed) do not match "
-                        f"training X columns. Expected: {list(self._X.columns)}, "
-                        f"Got: {list(_exog.columns)}"
-                    )
-                else:
-                    # Reorder columns if they are just in a different order
-                    try:
-                        _exog = _exog[self._X.columns]
-                    except Exception as e:
-                        raise ValueError(f"Error aligning prediction exog columns: {e}")
-
-        # Statsmodels predict typically returns a numpy array, convert to Series
-        predictions_np = self.results.predict(exog=_exog, **kwargs)
-        return pd.Series(predictions_np, index=_exog.index)
+        return self.results.predict(exog=_exog, transform=False, **kwargs)
