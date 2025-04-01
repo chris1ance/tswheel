@@ -26,12 +26,23 @@ class TSOLS:
         results (RegressionResultsWrapper): The fitted OLS results instance, obtained using
                                             HAC standard errors (cov_type='HAC').
         has_intercept (bool): Flag indicating if an intercept ('const') term was added to X.
+
+    Public Methods:
+        get_residuals(): Get residuals from the fitted OLS model.
+        get_fitted_values(): Get fitted values from the OLS model.
+        get_r2(adjusted=False): Get R-squared or adjusted R-squared.
+        get_coefficients_summary(): Get summary DataFrame of coefficients and HAC statistics.
+        get_ftest_results(): Get overall model F-statistic and p-value.
+        summary(): Get the full statsmodels summary object.
+        test_breusch_godfrey(nlags=None): Perform Breusch-Godfrey test for residual autocorrelation.
+        test_coefficient_restrictions(hypotheses): Perform F-test for linear restrictions on coefficients.
+        predict(exog, **kwargs): Generate predictions using the fitted model.
     """
 
     def __init__(self, y: pd.Series, X: pd.DataFrame, intercept: bool = True) -> None:
         """
-        Initializes the tsOLS, aligns data, handles NaNs, fits the OLS model using
-        HAC standard errors, and stores the results.
+        Initialize the tsOLS, align data, handle NaNs, fit the OLS model using
+        HAC standard errors, and store results.
 
         The input Series and DataFrame are aligned using an inner join on their indices.
         Rows containing NaN values in either the aligned y or X are dropped before fitting.
@@ -39,11 +50,11 @@ class TSOLS:
         automatic lag length selection based on Newey and West (1994).
 
         Args:
-            y (pd.Series): The dependent variable (n_samples,).
-            X (pd.DataFrame): The independent variables (n_samples, n_features).
-            intercept (bool, optional): If True, adds a constant intercept term to X
-                                       using `sm.add_constant`. Defaults to True.
-                                       If False, no intercept is added.
+            y (pd.Series): The dependent variable.
+            X (pd.DataFrame): The independent variables.
+            intercept (bool, default=True): If True, adds a constant intercept term to X
+                                            using `sm.add_constant`. If False, no
+                                            intercept is added.
 
         Raises:
             ValueError: If y and X have incompatible index types.
@@ -94,7 +105,6 @@ class TSOLS:
             const         1.0490  0.1018  10.3079   0.0000
             x1            0.4019  0.2999   1.3400   0.1834
             x2           -0.8310  0.3099  -2.6815   0.0086
-
         """
         if not isinstance(y, pd.Series):
             raise TypeError(f"Expected y to be a pandas Series, but got {type(y)}")
@@ -114,7 +124,10 @@ class TSOLS:
         _y, _X = y.align(X, join="inner", axis=0)
 
         # Create a combined mask for non-NaN values in both DataFrames
-        valid_mask = ~(_X.isna().any(axis=1) | _y.isna().any(axis=1))
+        # For Series, we don't use axis parameter
+        x_mask = ~_X.isna().any(axis=1)
+        y_mask = ~_y.isna()
+        valid_mask = x_mask & y_mask
 
         # Apply the mask to both DataFrames
         _X = _X.loc[valid_mask]
@@ -142,14 +155,14 @@ class TSOLS:
 
     def get_residuals(self) -> pd.Series:
         """
-        Returns the residuals from the fitted OLS regression model.
+        Get residuals from the fitted OLS model.
 
         Residuals are the differences between the observed values (`_y`) and the
         values predicted by the model using the fitted parameters on `_X`.
-        The returned Series is indexed according to `_y`.
 
         Returns:
-            pd.Series: A pandas Series containing the residuals, indexed the same as `_y`
+            residuals (pd.Series): Residuals from the model, indexed like the input
+                                   data used for fitting (`_y`).
 
         Examples:
             >>> # Assuming ols_pd is an initialized tsOLS instance from the __init__ example
@@ -170,14 +183,15 @@ class TSOLS:
 
     def get_fitted_values(self) -> pd.Series:
         """
-        Returns the fitted values from the OLS regression model.
+        Get fitted values from the OLS model.
 
         Fitted values are the values predicted by the model using the fitted parameters
         on the training data `_X`. They represent the "explained" component of the
-        dependent variable. The returned Series is indexed according to `_y`.
+        dependent variable.
 
         Returns:
-            pd.Series: A pandas Series containing the fitted values, indexed the same as `_y`
+            fitted_values (pd.Series): Fitted values from the model, indexed like the
+                                       input data used for fitting (`_y`).
 
         Examples:
             >>> # Assuming ols_pd is an initialized tsOLS instance from the __init__ example
@@ -198,18 +212,17 @@ class TSOLS:
 
     def get_r2(self, adjusted: bool = False) -> float:
         """
-        Returns the R-squared or adjusted R-squared value of the fitted model.
+        Get R-squared or adjusted R-squared.
 
         R-squared represents the proportion of the variance in the dependent variable
         that is predictable from the independent variables. Adjusted R-squared penalizes
         the addition of predictors that do not improve the model fit.
 
         Args:
-            adjusted (bool): If True, returns the adjusted R-squared.
-                             Defaults to False (returns standard R-squared).
+            adjusted (bool, default=False): If True, return adjusted R-squared.
 
         Returns:
-            float: The R-squared or adjusted R-squared value.
+            r_squared (float): R-squared or adjusted R-squared value.
 
         Examples:
             >>> # Assuming ols_pd is an initialized tsOLS instance from the __init__ example
@@ -227,16 +240,16 @@ class TSOLS:
 
     def get_coefficients_summary(self) -> pd.DataFrame:
         """
-        Returns a DataFrame summarizing the estimated coefficients and HAC statistics.
+        Get summary DataFrame of coefficients and HAC statistics.
 
         The DataFrame includes the estimated coefficient values, their HAC standard errors,
         the corresponding t-statistics, and the p-values, calculated using the
         Newey-West estimator.
 
         Returns:
-            pd.DataFrame: A DataFrame with columns 'Coefficient', 'SE' (Standard Error),
-                          'tvalues', and 'pvalues', indexed by the feature names
-                          from the (potentially augmented) X DataFrame used in fitting (`_X`).
+            summary_df (pd.DataFrame): DataFrame with columns 'Coefficient', 'SE'
+                                       (Standard Error), 'tvalues', and 'pvalues',
+                                       indexed by the feature names from `_X`.
 
         Examples:
             >>> # Assuming ols_pd is an initialized tsOLS instance from the __init__ example
@@ -259,7 +272,7 @@ class TSOLS:
 
     def get_ftest_results(self) -> dict[str, float]:
         """
-        Returns the F-statistic and its p-value for the overall model significance test.
+        Get overall model F-statistic and p-value.
 
         The F-statistic tests the hypothesis that all regression coefficients (excluding
         the intercept) are simultaneously equal to zero. The p-value indicates the
@@ -267,9 +280,8 @@ class TSOLS:
         if the null hypothesis (all coefficients are zero) were true.
 
         Returns:
-            dict[str, float]: A dictionary containing:
-                            'fvalue': The F-statistic value
-                            'pvalue': The p-value for the F-statistic
+            ftest_results (dict[str, float]): Dictionary with 'fvalue' (F-statistic)
+                                              and 'pvalue' (p-value for F-statistic).
 
         Examples:
             >>> # Assuming ols_pd is an initialized tsOLS instance from the __init__ example
@@ -286,14 +298,14 @@ class TSOLS:
 
     def summary(self) -> Any:
         """
-        Returns the full summary table generated by statsmodels.
+        Get the full statsmodels summary object.
 
         This provides a comprehensive overview of the regression results, including
         coefficients, standard errors, t-statistics, p-values, R-squared, F-statistic, etc.
 
         Returns:
-            Any: The summary object from statsmodels results (typically a Summary instance).
-                 Use print(ols_wrapper.summary()) to display it.
+            summary_obj (Any): The summary object from statsmodels results (typically a
+                               Summary instance). Use print() to display it.
 
         Examples:
             >>> # Assuming ols_pd is an initialized tsOLS instance from the __init__ example
@@ -304,20 +316,19 @@ class TSOLS:
 
     def test_breusch_godfrey(self, nlags: int | None = None) -> dict[str, float]:
         """
-        Performs Breusch-Godfrey test for residual autocorrelation.
+        Perform Breusch-Godfrey test for residual autocorrelation.
 
-        This method tests the null hypothesis of no serial correlation in the residuals
-        up to order 'nlags'. It returns only the p-values from both the Lagrange Multiplier
-        and F-test versions of the test.
+        Tests the null hypothesis of no serial correlation in the residuals up to
+        order 'nlags'. Returns p-values from both the Lagrange Multiplier and F-test.
 
         Args:
-            nlags (int | None): Number of lags to include in the auxiliary regression.
-                               If None, an appropriate lag length is selected.
+            nlags (int | None, default=None): Number of lags for the test. If None,
+                                              it's auto-selected based on sample size.
 
         Returns:
-            dict[str, float]: A dictionary containing the p-values:
-                             'lmpval': p-value for the Lagrange Multiplier test
-                             'fpval': p-value for the F-test
+            bg_test_results (dict[str, float]): Dictionary with p-values 'lmpval'
+                                                (Lagrange Multiplier test) and 'fpval'
+                                                (F-test).
 
         Examples:
             >>> # Assuming ols_pd is an initialized tsOLS instance
@@ -339,31 +350,31 @@ class TSOLS:
             nlags = min(int(np.ceil(np.sqrt(T))), int(T / 5))  # Common rule of thumb
 
         # Run the Breusch-Godfrey test
-        _, lmpval, _, fpval, _ = smd.acorr_breusch_godfrey(self.results, nlags=nlags)
+        lm, lmpval, fval, fpval = smd.acorr_breusch_godfrey(
+            self.results, nlags=nlags, store=False
+        )
 
         return {"lmpval": float(lmpval), "fpval": float(fpval)}
 
     def test_coefficient_restrictions(self, hypotheses: list[str]) -> dict[str, float]:
         """
-        Performs an F-test for linear restrictions on coefficients.
+        Perform F-test for linear restrictions on coefficients.
 
-        This method tests joint linear hypotheses about model coefficients using the
-        F-test functionality from statsmodels. The hypotheses are specified as strings
-        that represent linear constraints.
+        Tests joint linear hypotheses about model coefficients using the F-test
+        functionality from statsmodels.
 
         Args:
-            hypotheses (list[str]): List of strings representing linear hypotheses to test.
-                                  Each string should be a valid linear constraint on the
-                                  coefficients, such as 'x1 = 0', 'x1 + x2 = 0', 'x1 = x2', etc.
-                                  Variable names must match the column names in the model.
+            hypotheses (list[str]): List of hypothesis strings (e.g., 'x1 = 0',
+                                    'x1 + x2 = 0', 'x1 = x2'). Variable names must
+                                    match the column names in the model.
 
         Returns:
-            dict[str, float]: A dictionary containing:
-                             'fstat': The F-statistic for the joint hypothesis test
-                             'pvalue': The p-value associated with the F-statistic
+            ftest_results (dict[str, float]): Dictionary with 'fstat' (F-statistic)
+                                              and 'pvalue' (p-value for F-statistic).
 
         Raises:
-            ValueError: If the hypotheses list is empty or contains invalid constraints.
+            ValueError: If the hypotheses list is empty or contains invalid constraints,
+                        or if variable names in hypotheses don't match model columns.
 
         Examples:
             >>> # Assuming ols_pd is an initialized tsOLS instance with variables 'x1' and 'x2'
@@ -402,28 +413,24 @@ class TSOLS:
 
     def predict(self, exog: pd.DataFrame, **kwargs: Any) -> pd.Series:
         """
-        Generates predictions using the fitted model.
+        Generate predictions using the fitted model.
 
         If the model was fitted with an intercept (`intercept=True` during initialization),
-        this method will automatically add a constant column (named 'const') to the
-        provided `exog` DataFrame if it doesn't already exist.
+        this method automatically adds a constant column ('const') to `exog` if missing.
 
         Args:
-            exog (pd.DataFrame): The exogenous variables (features) for which
-                to generate predictions. Must be a pandas DataFrame. `exog` should
-                contain columns matching the original non-constant
-                features used for training. A constant column will be added automatically if
-                missing.
-            **kwargs: Additional keyword arguments passed to the statsmodels predict method.
+            exog (pd.DataFrame): DataFrame of exogenous variables for prediction. Must
+                                 contain columns matching the original non-constant
+                                 features used for training.
+            **kwargs (Any): Additional arguments for `statsmodels.results.predict`.
 
         Returns:
-            pd.Series: The predicted values. The index matches `exog`.
+            predictions (pd.Series): Predicted values, indexed like `exog`.
 
         Raises:
-            ValueError: If the provided `exog` (after potentially adding a constant)
-                        has a different set of columns than the internal training data `_X`,
-                        or if columns cannot be aligned.
-            TypeError: If the provided `exog` is not a pandas DataFrame.
+            ValueError: If `exog` columns (after potentially adding a constant) don't
+                        match training columns or cannot be aligned.
+            TypeError: If `exog` is not a pandas DataFrame.
 
         Examples:
             >>> # Assuming ols_pd is an initialized tsOLS instance from the __init__ example
