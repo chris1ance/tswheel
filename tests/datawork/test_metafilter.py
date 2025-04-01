@@ -2,17 +2,17 @@ import pytest
 import pandas as pd
 
 from tswheel.datawork.metafilter import (
-    filter_df,
-    metafilter_df,
+    Metafilter,
     FilterDict,
     DataFrameDict,
     MetaFilterConfig,
     PostFilterFuncDict,
+    MetaFilterResult,
 )
 
 
 class TestFilterDF:
-    """Tests for the filter_df function."""
+    """Tests for the filter_df method of Metafilter class."""
 
     @pytest.fixture
     def sample_df(self) -> pd.DataFrame:
@@ -30,7 +30,7 @@ class TestFilterDF:
         """Test filtering with a single value for a column."""
         # Filter for category 'A'
         filters: FilterDict = {"category": "A"}
-        result = filter_df(sample_df, filters, label="CategoryA")
+        result = Metafilter.filter_df(sample_df, filters, label="CategoryA")
 
         # Check summary DataFrame structure
         assert isinstance(result, pd.DataFrame)
@@ -48,7 +48,7 @@ class TestFilterDF:
         """Test filtering with multiple values for a column."""
         # Filter for categories 'A' and 'B'
         filters: FilterDict = {"category": ["A", "B"]}
-        result = filter_df(sample_df, filters, label="CategoryAB")
+        result = Metafilter.filter_df(sample_df, filters, label="CategoryAB")
 
         filtered = result.loc["CategoryAB", "result"]
         assert len(filtered) == 5  # Should have 5 rows with category 'A' or 'B'
@@ -58,7 +58,7 @@ class TestFilterDF:
         """Test filtering on multiple columns simultaneously."""
         # Filter for category 'A' and region 'North'
         filters: FilterDict = {"category": "A", "region": "North"}
-        result = filter_df(sample_df, filters, label="ANorth")
+        result = Metafilter.filter_df(sample_df, filters, label="ANorth")
 
         filtered = result.loc["ANorth", "result"]
         assert len(filtered) == 2  # Should have 2 rows matching both criteria
@@ -69,14 +69,14 @@ class TestFilterDF:
     def test_filter_empty_dict(self, sample_df):
         """Test behavior with empty filters dictionary."""
         # Empty filters should return original DataFrame
-        result = filter_df(sample_df, {})
+        result = Metafilter.filter_df(sample_df, {})
         assert result.equals(sample_df)  # Should return original DataFrame unchanged
 
     def test_filter_boolean_column(self, sample_df):
         """Test filtering on a boolean column."""
         # Filter for active=True
         filters: FilterDict = {"active": True}
-        result = filter_df(sample_df, filters, label="Active")
+        result = Metafilter.filter_df(sample_df, filters, label="Active")
 
         filtered = result.loc["Active", "result"]
         assert len(filtered) == 4  # Should have 4 rows with active=True
@@ -86,7 +86,7 @@ class TestFilterDF:
         """Test filtering on a numeric column."""
         # Filter for values >= 30
         filters: FilterDict = {"value": [30, 40, 50, 60]}
-        result = filter_df(sample_df, filters, label="HighValue")
+        result = Metafilter.filter_df(sample_df, filters, label="HighValue")
 
         filtered = result.loc["HighValue", "result"]
         assert len(filtered) == 4  # Should have 4 rows with value >= 30
@@ -97,7 +97,7 @@ class TestFilterDF:
         # Column 'nonexistent' doesn't exist
         filters: FilterDict = {"nonexistent": "value"}
         with pytest.raises(ValueError) as excinfo:
-            filter_df(sample_df, filters)
+            Metafilter.filter_df(sample_df, filters)
         assert "Column 'nonexistent' not found in DataFrame" in str(excinfo.value)
 
     def test_error_empty_result(self, sample_df):
@@ -105,7 +105,7 @@ class TestFilterDF:
         # No rows have category 'X'
         filters: FilterDict = {"category": "X"}
         with pytest.raises(ValueError) as excinfo:
-            filter_df(sample_df, filters)
+            Metafilter.filter_df(sample_df, filters)
         assert "empty DataFrame" in str(excinfo.value)
 
     def test_error_invalid_filter_value_type(self, sample_df):
@@ -113,33 +113,33 @@ class TestFilterDF:
         # Use a non-iterable, non-scalar value (None) which should cause a TypeError
         filters: FilterDict = {"category": None}
         with pytest.raises(TypeError) as excinfo:
-            filter_df(sample_df, filters)
+            Metafilter.filter_df(sample_df, filters)
         assert "must be a list-like iterable" in str(excinfo.value)
 
     def test_error_invalid_df_type(self):
         """Test error when df is not a pandas DataFrame."""
         # df parameter must be a DataFrame
         with pytest.raises(TypeError) as excinfo:
-            filter_df("not_a_dataframe", {"col": "val"})
+            Metafilter.filter_df("not_a_dataframe", {"col": "val"})
         assert "must be a pandas DataFrame" in str(excinfo.value)
 
     def test_error_invalid_filters_type(self, sample_df):
         """Test error when filters is not a dictionary."""
         # filters parameter must be a dictionary
         with pytest.raises(TypeError) as excinfo:
-            filter_df(sample_df, "not_a_dict")
+            Metafilter.filter_df(sample_df, "not_a_dict")
         assert "must be a dictionary" in str(excinfo.value)
 
     def test_error_invalid_label_type(self, sample_df):
         """Test error when label is not a string."""
         # label parameter must be a string or None
         with pytest.raises(TypeError) as excinfo:
-            filter_df(sample_df, {"category": "A"}, label=123)
+            Metafilter.filter_df(sample_df, {"category": "A"}, label=123)
         assert "must be a string or None" in str(excinfo.value)
 
 
 class TestMetaFilterDF:
-    """Tests for the metafilter_df function."""
+    """Tests for the metafilter_df method of Metafilter class."""
 
     @pytest.fixture
     def sample_dfs(self) -> DataFrameDict:
@@ -176,7 +176,7 @@ class TestMetaFilterDF:
             }
         }
 
-        result = metafilter_df(sample_dfs, filters)
+        result = Metafilter.metafilter_df(sample_dfs, filters)
 
         # Check structure of the result
         assert "North_Region" in result
@@ -208,7 +208,7 @@ class TestMetaFilterDF:
             },
         }
 
-        result = metafilter_df(sample_dfs, filters)
+        result = Metafilter.metafilter_df(sample_dfs, filters)
 
         # Check North_Region case
         assert "North_Region" in result
@@ -234,7 +234,7 @@ class TestMetaFilterDF:
             }
         }
 
-        result = metafilter_df(sample_dfs, filters)
+        result = Metafilter.metafilter_df(sample_dfs, filters)
 
         # Check filtered sales DataFrame (North region AND Q1/Q2)
         sales_filtered = result["NorthRegion_SegmentA"]["sales"].loc[
@@ -255,7 +255,7 @@ class TestMetaFilterDF:
     def test_empty_filters(self, sample_dfs):
         """Test behavior with empty filters dictionary."""
         # Empty filters should return empty result
-        result = metafilter_df(sample_dfs, {})
+        result = Metafilter.metafilter_df(sample_dfs, {})
         assert result == {}
 
     def test_error_df_label_not_found(self, sample_dfs):
@@ -263,21 +263,21 @@ class TestMetaFilterDF:
         # DataFrame label 'nonexistent' doesn't exist
         filters: MetaFilterConfig = {"TestCase": {"nonexistent": {"col": "val"}}}
         with pytest.raises(ValueError) as excinfo:
-            metafilter_df(sample_dfs, filters)
+            Metafilter.metafilter_df(sample_dfs, filters)
         assert "DataFrame label 'nonexistent'" in str(excinfo.value)
 
     def test_error_invalid_dfs_type(self):
         """Test error when dfs is not a dictionary."""
         # dfs parameter must be a dictionary
         with pytest.raises(TypeError) as excinfo:
-            metafilter_df("not_a_dict", {"case": {"df": {"col": "val"}}})
+            Metafilter.metafilter_df("not_a_dict", {"case": {"df": {"col": "val"}}})
         assert "must be a dictionary" in str(excinfo.value)
 
     def test_error_invalid_filters_type(self, sample_dfs):
         """Test error when filters is not a dictionary."""
         # filters parameter must be a dictionary
         with pytest.raises(TypeError) as excinfo:
-            metafilter_df(sample_dfs, "not_a_dict")
+            Metafilter.metafilter_df(sample_dfs, "not_a_dict")
         assert "must be a dictionary" in str(excinfo.value)
 
     def test_error_invalid_df_object(self):
@@ -285,7 +285,7 @@ class TestMetaFilterDF:
         # Values in dfs must be DataFrames
         invalid_dfs = {"df1": "not_a_dataframe"}
         with pytest.raises(TypeError) as excinfo:
-            metafilter_df(invalid_dfs, {"case": {"df1": {"col": "val"}}})
+            Metafilter.metafilter_df(invalid_dfs, {"case": {"df1": {"col": "val"}}})
         assert "must be a pandas DataFrame" in str(excinfo.value)
 
     def test_error_propagation_from_filter_df(self, sample_dfs):
@@ -293,11 +293,51 @@ class TestMetaFilterDF:
         # This will cause filter_df to raise an error (empty result)
         filters: MetaFilterConfig = {"TestCase": {"sales": {"product": "NonExistent"}}}
         with pytest.raises(ValueError) as excinfo:
-            metafilter_df(sample_dfs, filters)
+            Metafilter.metafilter_df(sample_dfs, filters)
         assert "empty DataFrame" in str(excinfo.value)
 
-    def test_post_filter_funcs_basic(self, sample_dfs):
-        """Test basic functionality of post_filter_funcs parameter."""
+
+class TestApplyPostFilterFuncs:
+    """Tests for the apply_post_filter_funcs method of Metafilter class."""
+
+    @pytest.fixture
+    def sample_dfs(self) -> DataFrameDict:
+        """Create sample DataFrames for testing."""
+        # Sales DataFrame
+        df_sales = pd.DataFrame(
+            {
+                "product": ["X", "Y", "Z", "X", "Y"],
+                "region": ["North", "South", "North", "East", "West"],
+                "sales": [1000, 2000, 1500, 3000, 2500],
+                "quarter": ["Q1", "Q1", "Q2", "Q2", "Q3"],
+            }
+        )
+
+        # Customers DataFrame
+        df_customers = pd.DataFrame(
+            {
+                "customer_id": [1, 2, 3, 4, 5],
+                "region": ["North", "South", "East", "West", "North"],
+                "segment": ["A", "B", "A", "B", "C"],
+                "active": [True, True, False, True, False],
+            }
+        )
+
+        return {"sales": df_sales, "customers": df_customers}
+
+    @pytest.fixture
+    def metafilter_result(self, sample_dfs) -> MetaFilterResult:
+        """Create a sample metafilter result for testing."""
+        filters: MetaFilterConfig = {
+            "North_Region": {
+                "sales": {"region": "North"},
+                "customers": {"region": "North"},
+            }
+        }
+        return Metafilter.metafilter_df(sample_dfs, filters)
+
+    def test_basic_functionality(self, metafilter_result):
+        """Test basic functionality of apply_post_filter_funcs."""
 
         # Define a simple post-filter function
         def add_count_column(summary_df: pd.DataFrame) -> pd.DataFrame:
@@ -306,18 +346,14 @@ class TestMetaFilterDF:
             filtered_df = summary_df.loc[case_label, "result"]
             return pd.DataFrame({"case": [case_label], "row_count": [len(filtered_df)]})
 
-        # Define filters and post-filter functions
-        filters: MetaFilterConfig = {"North_Region": {"sales": {"region": "North"}}}
+        # Define post-filter functions
         post_funcs: PostFilterFuncDict = {"sales": add_count_column}
 
-        # Run metafilter_df with post_filter_funcs
-        result = metafilter_df(sample_dfs, filters, post_filter_funcs=post_funcs)
+        # Apply post-filter functions
+        result = Metafilter.apply_post_filter_funcs(metafilter_result, post_funcs)
 
         # Check that post-filter function was applied
-        assert "result_post_filter_func" in result["North_Region"]["sales"].columns
-        post_result = result["North_Region"]["sales"].loc[
-            "North_Region", "result_post_filter_func"
-        ]
+        post_result = result["North_Region"]["sales"]
 
         # Verify post-filter result
         assert isinstance(post_result, pd.DataFrame)
@@ -328,8 +364,8 @@ class TestMetaFilterDF:
             post_result.iloc[0]["row_count"] == 2
         )  # Should be 2 rows with region 'North'
 
-    def test_post_filter_funcs_multiple(self, sample_dfs):
-        """Test post_filter_funcs with multiple DataFrames and functions."""
+    def test_multiple_functions(self, metafilter_result):
+        """Test apply_post_filter_funcs with multiple DataFrames and functions."""
 
         # Define post-filter functions for different DataFrames
         def summarize_sales(summary_df: pd.DataFrame) -> pd.DataFrame:
@@ -352,32 +388,22 @@ class TestMetaFilterDF:
                 }
             )
 
-        # Define filters and post-filter functions
-        filters: MetaFilterConfig = {
-            "North_Region": {
-                "sales": {"region": "North"},
-                "customers": {"region": "North"},
-            }
-        }
+        # Define post-filter functions
         post_funcs: PostFilterFuncDict = {
             "sales": summarize_sales,
             "customers": summarize_customers,
         }
 
-        # Run metafilter_df with post_filter_funcs
-        result = metafilter_df(sample_dfs, filters, post_filter_funcs=post_funcs)
+        # Apply post-filter functions
+        result = Metafilter.apply_post_filter_funcs(metafilter_result, post_funcs)
 
         # Check sales post-filter result
-        sales_post = result["North_Region"]["sales"].loc[
-            "North_Region", "result_post_filter_func"
-        ]
+        sales_post = result["North_Region"]["sales"]
         assert "total_sales" in sales_post.columns
         assert "avg_sales" in sales_post.columns
 
         # Check customers post-filter result
-        customers_post = result["North_Region"]["customers"].loc[
-            "North_Region", "result_post_filter_func"
-        ]
+        customers_post = result["North_Region"]["customers"]
         assert "active_count" in customers_post.columns
         assert "total_count" in customers_post.columns
 
@@ -387,8 +413,8 @@ class TestMetaFilterDF:
         )  # Sum of sales for North region
         assert customers_post.iloc[0]["total_count"] == 2  # 2 customers in North region
 
-    def test_post_filter_funcs_partial(self, sample_dfs):
-        """Test post_filter_funcs with function for only some DataFrames."""
+    def test_partial_application(self, metafilter_result):
+        """Test apply_post_filter_funcs with function for only some DataFrames."""
 
         # Define post-filter function only for sales
         def summarize_sales(summary_df: pd.DataFrame) -> pd.DataFrame:
@@ -396,65 +422,49 @@ class TestMetaFilterDF:
             filtered_df = summary_df.loc[case_label, "result"]
             return pd.DataFrame({"total_sales": [filtered_df["sales"].sum()]})
 
-        # Define filters for both DataFrames but post-filter only for sales
-        filters: MetaFilterConfig = {
-            "North_Region": {
-                "sales": {"region": "North"},
-                "customers": {"region": "North"},
-            }
-        }
+        # Define post-filter only for sales
         post_funcs: PostFilterFuncDict = {"sales": summarize_sales}
 
-        # Run metafilter_df with post_filter_funcs
-        result = metafilter_df(sample_dfs, filters, post_filter_funcs=post_funcs)
+        # Apply post-filter functions
+        result = Metafilter.apply_post_filter_funcs(metafilter_result, post_funcs)
 
         # Check that post-filter was applied only to sales
-        assert "result_post_filter_func" in result["North_Region"]["sales"].columns
-        assert (
-            "result_post_filter_func" not in result["North_Region"]["customers"].columns
-        )
+        assert isinstance(result["North_Region"]["sales"], pd.DataFrame)
+        assert "total_sales" in result["North_Region"]["sales"].columns
 
-    def test_error_invalid_post_filter_funcs_type(self, sample_dfs):
+        # Customers should still be the original DataFrame
+        assert "result" in result["North_Region"]["customers"].columns
+
+    def test_error_invalid_result_type(self):
+        """Test error when metafilter_result is not a dictionary."""
+        post_funcs: PostFilterFuncDict = {"sales": lambda df: df}
+
+        with pytest.raises(TypeError) as excinfo:
+            Metafilter.apply_post_filter_funcs("not_a_dict", post_funcs)
+        assert "must be a dictionary" in str(excinfo.value)
+
+    def test_error_invalid_post_funcs_type(self, metafilter_result):
         """Test error when post_filter_funcs is not a dictionary."""
-        filters: MetaFilterConfig = {"North_Region": {"sales": {"region": "North"}}}
-
-        # post_filter_funcs must be a dictionary or None
         with pytest.raises(TypeError) as excinfo:
-            metafilter_df(sample_dfs, filters, post_filter_funcs="not_a_dict")
-        assert "must be a dictionary or None" in str(excinfo.value)
+            Metafilter.apply_post_filter_funcs(metafilter_result, "not_a_dict")
+        assert "must be a dictionary" in str(excinfo.value)
 
-    def test_error_post_filter_func_not_callable(self, sample_dfs):
+    def test_error_post_func_not_callable(self, metafilter_result):
         """Test error when a post-filter function is not callable."""
-        filters: MetaFilterConfig = {"North_Region": {"sales": {"region": "North"}}}
-
-        # Values in post_filter_funcs must be callable
         post_funcs: PostFilterFuncDict = {"sales": "not_callable"}
+
         with pytest.raises(TypeError) as excinfo:
-            metafilter_df(sample_dfs, filters, post_filter_funcs=post_funcs)
+            Metafilter.apply_post_filter_funcs(metafilter_result, post_funcs)
         assert "must be callable" in str(excinfo.value)
 
-    def test_error_post_filter_func_wrong_return_type(self, sample_dfs):
-        """Test error when a post-filter function returns non-DataFrame."""
-
-        def wrong_return_type(_: pd.DataFrame) -> str:
-            return "not a DataFrame"
-
-        filters: MetaFilterConfig = {"North_Region": {"sales": {"region": "North"}}}
-        post_funcs: PostFilterFuncDict = {"sales": wrong_return_type}
-
-        with pytest.raises(TypeError) as excinfo:
-            metafilter_df(sample_dfs, filters, post_filter_funcs=post_funcs)
-        assert "must return a pandas DataFrame" in str(excinfo.value)
-
-    def test_post_filter_func_exception_handling(self, sample_dfs):
+    def test_error_propagation_from_post_func(self, metafilter_result):
         """Test error propagation from post-filter function."""
 
         def failing_func(_: pd.DataFrame) -> pd.DataFrame:
             raise ValueError("Intentional error in post-filter function")
 
-        filters: MetaFilterConfig = {"North_Region": {"sales": {"region": "North"}}}
         post_funcs: PostFilterFuncDict = {"sales": failing_func}
 
         with pytest.raises(ValueError) as excinfo:
-            metafilter_df(sample_dfs, filters, post_filter_funcs=post_funcs)
+            Metafilter.apply_post_filter_funcs(metafilter_result, post_funcs)
         assert "Intentional error in post-filter function" in str(excinfo.value)
