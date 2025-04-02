@@ -281,7 +281,7 @@ def merge_on_index(
     left: pd.DataFrame,
     right: pd.DataFrame,
     how: str = "inner",
-    suffixes: tuple[str, str] = ("_x", "_y"),
+    suffixes: tuple[str, str] = ("_left", "_right"),
     validate: Literal["1:1", "1:m", "m:1", "m:m"] | None = None,
     indicator: bool = False,
 ) -> pd.DataFrame:
@@ -350,4 +350,146 @@ def merge_on_index(
         suffixes=suffixes,
         validate=validate,
         indicator=indicator,
+    )
+
+
+def ts_concat(
+    objs: list[pd.DataFrame | pd.Series],
+    axis: Literal[0, 1, "index", "columns"] = 0,
+    join: Literal["inner", "outer"] = "outer",
+    ignore_index: bool = False,
+) -> pd.DataFrame | pd.Series:
+    """
+    Concatenates a sequence of pandas objects along an axis after validation.
+
+    Validates that all objects have the same index type and that no object
+    has duplicate index values. If concatenating along columns (axis=1),
+    it also validates that there are no overlapping column names between
+    the DataFrames.
+
+    Args:
+        objs (list[pd.DataFrame | pd.Series]): A sequence of pandas Series or
+            DataFrame objects to concatenate.
+        axis (Literal[0, 1, 'index', 'columns'], default 0): The axis to
+            concatenate along. 0/'index' for rows, 1/'columns' for columns.
+        join (Literal['inner', 'outer'], default 'outer'): How to handle
+            indexes on the other axis (or axes). 'outer' for union, 'inner'
+            for intersection.
+        ignore_index (bool, default False): If True, do not use the index
+            values along the concatenation axis. The resulting axis will be
+            labeled 0, ..., n - 1.
+
+    Returns:
+        pd.DataFrame | pd.Series: The concatenated pandas object. Type depends
+            on the input objects and the axis of concatenation.
+
+    Raises:
+        TypeError: If objs is not a list or contains non-pandas objects.
+        ValueError: If objs is empty, if any object has duplicate index values,
+                    if objects have incompatible index types, or if concatenating
+                    along columns and duplicate column names exist across objects.
+
+    Examples:
+        >>> import pandas as pd
+        >>> s1 = pd.Series(['a', 'b'], index=pd.RangeIndex(2))
+        >>> s2 = pd.Series(['c', 'd'], index=pd.RangeIndex(start=2, stop=4))
+        >>> ts_concat([s1, s2]) # Concatenate rows (axis=0)
+        0    a
+        1    b
+        2    c
+        3    d
+        dtype: object
+
+        >>> df1 = pd.DataFrame({'A': [1, 2]}, index=pd.RangeIndex(2))
+        >>> df2 = pd.DataFrame({'B': [3, 4]}, index=pd.RangeIndex(2))
+        >>> ts_concat([df1, df2], axis=1) # Concatenate columns (axis=1)
+           A  B
+        0  1  3
+        1  2  4
+
+        >>> # Example with incompatible index types (raises ValueError)
+        >>> df3 = pd.DataFrame({'C': [5, 6]}, index=pd.Index(['x', 'y']))
+        >>> try:
+        ...     ts_concat([df1, df3])
+        ... except ValueError as e:
+        ...     print(e)
+        Index types differ: RangeIndex vs Index
+
+        >>> # Example with duplicate index (raises ValueError)
+        >>> df_dup_idx = pd.DataFrame({'A': [7, 8]}, index=pd.RangeIndex(start=0, stop=2))
+        >>> try:
+        ...     ts_concat([df1, df_dup_idx]) # df1 and df_dup_idx share index 0, 1
+        ... except ValueError as e:
+        ...     print(e)
+        Object at index 1 has duplicate index values.
+
+        >>> # Example with duplicate columns when axis=1 (raises ValueError)
+        >>> df_dup_col = pd.DataFrame({'A': [9, 10]}, index=pd.RangeIndex(2))
+        >>> try:
+        ...     ts_concat([df1, df_dup_col], axis=1)
+        ... except ValueError as e:
+        ...     print(e)
+        Duplicate column names found: {'A'}
+
+    See Also:
+        pandas.concat: The underlying concatenation function.
+    """
+    # --- Input Validation ---
+    if not isinstance(objs, list):
+        raise TypeError("Input 'objs' must be a list of pandas DataFrames or Series.")
+    if not objs:
+        raise ValueError("Input 'objs' list cannot be empty.")
+
+    # Check for duplicate indices, compatible index types, and column name collisions
+    # Also check if Series have names when concatenating columns
+    first_obj = objs[0]
+    all_columns = set()
+    if isinstance(first_obj, pd.DataFrame) and axis in [1, "columns"]:
+        all_columns.update(first_obj.columns)
+
+    for i, obj in enumerate(objs):
+        if not isinstance(obj, (pd.DataFrame, pd.Series)):
+            raise TypeError(f"Object at index {i} is not a pandas DataFrame or Series.")
+        if obj.index.duplicated().any():
+            raise ValueError(f"Object at index {i} has duplicate index values.")
+
+        # Check index compatibility against the first object
+        if i > 0:
+            compatible, message = have_same_index_type(first_obj, obj)
+            if not compatible:
+                raise ValueError(message)
+
+        # Checks specific to column concatenation (axis=1)
+        if axis in [1, "columns"]:
+            if isinstance(obj, pd.DataFrame):
+                current_columns = set(obj.columns)
+                if i > 0:  # Only check collisions with previous objects' columns
+                    intersection = all_columns.intersection(current_columns)
+                    if intersection:
+                        raise ValueError(
+                            f"Duplicate column names found: {intersection}"
+                        )
+                all_columns.update(
+                    current_columns
+                )  # Add current columns for next checks
+            elif isinstance(obj, pd.Series):
+                if obj.name is None:
+                    raise ValueError(
+                        f"Series at index {i} must have a 'name' attribute for column concatenation."
+                    )
+                # Check potential collision between Series name and existing columns
+                if obj.name in all_columns:
+                    raise ValueError(
+                        f"Duplicate column name found: '{obj.name}' (from Series at index {i})"
+                    )
+                all_columns.add(obj.name)  # Add series name to column set
+
+    # --- Concatenation ---
+    # Note: verify_integrity=True regarding index is implicitly handled by the check above.
+    return pd.concat(
+        objs=objs,
+        axis=axis,
+        join=join,
+        ignore_index=ignore_index,
+        sort=True if axis in [1, "columns"] else False,  # Sort columns when axis=1
     )
