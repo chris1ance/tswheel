@@ -3,7 +3,7 @@ import numpy as np
 import statsmodels.api as sm
 import statsmodels.stats.diagnostic as smd
 from typing import Any
-from .datawork.dfutils import have_same_index_type
+from .datautils.pdutils import have_same_index_type
 
 
 class TSOLS:

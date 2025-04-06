@@ -2,7 +2,7 @@ import pandas as pd
 import pytest
 from datetime import date
 
-from tswheel.datawork.dfutils import coerce_to_period_index
+from tswheel.datautils.pdutils import coerce_to_period_index
 
 
 # --- Fixtures ---

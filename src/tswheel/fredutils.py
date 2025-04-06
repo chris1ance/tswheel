@@ -2,7 +2,7 @@
 
 from fredapi import Fred
 import pandas as pd
-from .datawork.strchecks import is_valid_date_format
+from .datautils.strchecks import is_valid_date_format
 
 pd.set_option("mode.copy_on_write", True)
 

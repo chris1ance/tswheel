@@ -1,5 +1,5 @@
 import pytest
-from tswheel.datawork.strchecks import (
+from tswheel.datautils.strchecks import (
     is_valid_date_format,
     is_valid_monthly_format,
     is_valid_quarterly_format,

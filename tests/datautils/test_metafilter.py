@@ -1,7 +1,7 @@
 import pytest
 import pandas as pd
 
-from tswheel.datawork.metafilter import (
+from tswheel.datautils.metafilter import (
     Metafilter,
     DataFrameDict,
     MetaFilterConfig,

@@ -1,7 +1,7 @@
 import pytest
 import pandas as pd
 import numpy as np
-from tswheel.datawork.dfutils import merge_on_index
+from tswheel.datautils.pdutils import merge_on_index
 
 
 class TestMergeOnIndex:

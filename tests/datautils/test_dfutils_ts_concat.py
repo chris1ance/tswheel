@@ -2,7 +2,7 @@ import pytest
 import pandas as pd
 import numpy as np
 
-from tswheel.datawork.dfutils import ts_concat
+from tswheel.datautils.pdutils import ts_concat
 
 
 def test_single_dataframe_input() -> None:

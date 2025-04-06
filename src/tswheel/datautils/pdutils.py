@@ -137,7 +137,7 @@ def coerce_to_period_index(
         >>> # DataFrame with DatetimeIndex
         >>> dates = pd.date_range('2023-01-01', periods=3, freq='D')
         >>> df_dt = pd.DataFrame({'data': [1, 2, 3]}, index=dates)
-        >>> df_period_dt = ensure_period_index(df_dt.copy())
+        >>> df_period_dt = coerce_to_period_index(df_dt.copy())
         >>> print(isinstance(df_period_dt.index, pd.PeriodIndex))
         True
         >>> print(df_period_dt.index.freqstr)
@@ -145,7 +145,7 @@ def coerce_to_period_index(
         >>>
         >>> # Series with DatetimeIndex
         >>> s_dt = pd.Series([1, 2, 3], index=dates)
-        >>> s_period_dt = ensure_period_index(s_dt.copy())
+        >>> s_period_dt = coerce_to_period_index(s_dt.copy())
         >>> print(isinstance(s_period_dt.index, pd.PeriodIndex))
         True
         >>> print(s_period_dt.index.freqstr)
@@ -154,18 +154,18 @@ def coerce_to_period_index(
         >>> # Object with PeriodIndex (no change)
         >>> periods = pd.period_range('2023-01', periods=3, freq='ME') # Use 'ME'
         >>> df_p = pd.DataFrame({'data': [4, 5, 6]}, index=periods)
-        >>> df_p_checked = ensure_period_index(df_p)
+        >>> df_p_checked = coerce_to_period_index(df_p)
         >>> print(df_p_checked.index is df_p.index)
         True
         >>> s_p = pd.Series([4, 5, 6], index=periods)
-        >>> s_p_checked = ensure_period_index(s_p)
+        >>> s_p_checked = coerce_to_period_index(s_p)
         >>> print(s_p_checked.index is s_p.index)
         True
         >>>
         >>> # Object with string index (convertible)
         >>> str_idx = ['2023-01', '2023-02', '2023-03']
         >>> df_str = pd.DataFrame({'data': [7, 8, 9]}, index=str_idx)
-        >>> df_period_str = ensure_period_index(df_str.copy()) # Infer freq='ME'
+        >>> df_period_str = coerce_to_period_index(df_str.copy()) # Infer freq='ME'
         >>> print(isinstance(df_period_str.index, pd.PeriodIndex))
         True
         >>> print(df_period_str.index.freqstr)
@@ -174,7 +174,7 @@ def coerce_to_period_index(
         >>> # Object with datetime.date index
         >>> date_idx = [date(2023, 1, 1), date(2023, 2, 1), date(2023, 3, 1)]
         >>> df_date = pd.DataFrame({'data': [10, 11, 12]}, index=date_idx)
-        >>> df_period_date = ensure_period_index(df_date.copy(), freq='ME') # Specify freq 'ME'
+        >>> df_period_date = coerce_to_period_index(df_date.copy(), freq='ME') # Specify freq 'ME'
         >>> print(isinstance(df_period_date.index, pd.PeriodIndex))
         True
         >>> print(df_period_date.index.freqstr)
@@ -183,7 +183,7 @@ def coerce_to_period_index(
         >>> # Object with non-convertible numeric index (raises TypeError)
         >>> df_range = pd.DataFrame({'data': [13, 14, 15]}, index=pd.RangeIndex(3))
         >>> try:
-        ...     ensure_period_index(df_range)
+        ...     coerce_to_period_index(df_range)
         ... except TypeError as e:
         ...     print(e) # doctest: +ELLIPSIS
         Index type RangeIndex with dtype int64 cannot be converted to PeriodIndex...
@@ -192,13 +192,13 @@ def coerce_to_period_index(
         >>> irregular_dates = pd.to_datetime(['2023-01-01', '2023-01-03', '2023-01-05'])
         >>> df_irreg = pd.DataFrame({'data': [1, 2, 3]}, index=irregular_dates)
         >>> try:
-        ...     ensure_period_index(df_irreg.copy()) # Infers '2D', which is not allowed
+        ...     coerce_to_period_index(df_irreg.copy()) # Infers '2D', which is not allowed
         ... except AssertionError as e:
         ...     print(e) # doctest: +ELLIPSIS
         Resulting PeriodIndex frequency '2D' (base: '2D') is not in ['B', 'D', 'W', 'M', 'Q', 'Y']
         >>>
         >>> # Force allowed frequency for irregular dates
-        >>> df_irreg_period_forced_d = ensure_period_index(df_irreg.copy(), freq='D') # Force 'D'
+        >>> df_irreg_period_forced_d = coerce_to_period_index(df_irreg.copy(), freq='D') # Force 'D'
         >>> print(df_irreg_period_forced_d.index)
         PeriodIndex(['2023-01-01', '2023-01-03', '2023-01-05'], dtype='period[D]')
     """
