@@ -5,6 +5,62 @@ import numpy as np
 from tswheel.datawork.dfutils import ts_concat
 
 
+def test_single_dataframe_input() -> None:
+    """
+    Test that ts_concat returns the original DataFrame when a single DataFrame is provided.
+    """
+    # --- Setup ---
+    df = pd.DataFrame({"A": [1, 2]}, index=pd.RangeIndex(2))
+
+    # --- Execute ---
+    result = ts_concat(df)
+
+    # --- Assert ---
+    assert result is df  # Should return the exact same object
+
+
+def test_single_series_input() -> None:
+    """
+    Test that ts_concat returns the original Series when a single Series is provided.
+    """
+    # --- Setup ---
+    s = pd.Series([1, 2], index=pd.RangeIndex(2), name="A")
+
+    # --- Execute ---
+    result = ts_concat(s)
+
+    # --- Assert ---
+    assert result is s  # Should return the exact same object
+
+
+def test_list_with_single_dataframe() -> None:
+    """
+    Test that ts_concat returns the original DataFrame when a list with a single DataFrame is provided.
+    """
+    # --- Setup ---
+    df = pd.DataFrame({"A": [1, 2]}, index=pd.RangeIndex(2))
+
+    # --- Execute ---
+    result = ts_concat([df])
+
+    # --- Assert ---
+    assert result is df  # Should return the exact same object
+
+
+def test_list_with_single_series() -> None:
+    """
+    Test that ts_concat returns the original Series when a list with a single Series is provided.
+    """
+    # --- Setup ---
+    s = pd.Series([1, 2], index=pd.RangeIndex(2), name="A")
+
+    # --- Execute ---
+    result = ts_concat([s])
+
+    # --- Assert ---
+    assert result is s  # Should return the exact same object
+
+
 def test_basic_row_concatenation() -> None:
     """
     Test basic row concatenation (axis=0) with DataFrames.

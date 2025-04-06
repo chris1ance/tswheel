@@ -6,15 +6,15 @@ pd.set_option("mode.copy_on_write", True)
 
 
 def have_same_index_type(
-    df1: pd.DataFrame,
-    df2: pd.DataFrame,
+    df1: pd.DataFrame | pd.Series,
+    df2: pd.DataFrame | pd.Series,
 ) -> tuple[bool, str]:
     """
-    Checks whether two pandas DataFrames have the same type of index and optionally the same frequency.
+    Checks whether two pandas objects (DataFrame or Series) have the same type of index and optionally the same frequency.
 
     Args:
-        df1 (pd.DataFrame): The first DataFrame to check
-        df2 (pd.DataFrame): The second DataFrame to check
+        df1 (pd.DataFrame | pd.Series): The first pandas object to check
+        df2 (pd.DataFrame | pd.Series): The second pandas object to check
 
     Returns:
         Tuple[bool, str]: A tuple containing:
@@ -28,6 +28,9 @@ def have_same_index_type(
         >>> df2 = pd.DataFrame(index=pd.date_range('2022-02-01', periods=3, freq='D'))
         >>> have_same_index_type(df1, df2)
         (True, 'Indices have the same type and frequency')
+        >>> s1 = pd.Series([1,2,3], index=pd.date_range('2022-01-01', periods=3, freq='D'))
+        >>> have_same_index_type(df1, s1)
+        (True, 'Indices have the same type and frequency')
 
         >>> # Same DatetimeIndex type but different frequency
         >>> df3 = pd.DataFrame(index=pd.date_range('2022-01-01', periods=3, freq='M'))
@@ -39,6 +42,11 @@ def have_same_index_type(
         >>> have_same_index_type(df1, df4)
         (False, 'Index types differ: DatetimeIndex vs RangeIndex')
     """
+    if not isinstance(df1, (pd.DataFrame, pd.Series)):
+        raise TypeError("Input 'df1' must be a pandas DataFrame or Series.")
+    if not isinstance(df2, (pd.DataFrame, pd.Series)):
+        raise TypeError("Input 'df2' must be a pandas DataFrame or Series.")
+
     if type(df1.index) is not type(df2.index):
         return (
             False,
@@ -71,17 +79,18 @@ def have_same_index_type(
 
 
 def ensure_period_index(
-    df: pd.DataFrame, freq: Literal["B", "D", "W", "M", "Q", "Y"] | None = None
-) -> pd.DataFrame:
+    obj: pd.DataFrame | pd.Series,
+    freq: Literal["B", "D", "W", "M", "Q", "Y"] | None = None,
+) -> pd.DataFrame | pd.Series:
     """
-    Ensures the DataFrame index is a pandas PeriodIndex with an allowed frequency.
+    Ensures the pandas object's index is a pandas PeriodIndex with an allowed frequency.
 
     Converts the index if it is a DatetimeIndex, a compatible object/string
     index, or contains datetime.date objects. The resulting PeriodIndex must
     have a base frequency belonging to ['B', 'D', 'W', 'M', 'Q', 'Y'].
 
     - If the index is already a PeriodIndex with an allowed frequency, the
-      DataFrame is returned unchanged.
+      object is returned unchanged.
     - If the index is a DatetimeIndex, it's converted using `to_period()`.
     - If the index is of another potentially convertible type (e.g., object dtype
       with period-like strings or datetime.date objects), it attempts conversion
@@ -94,7 +103,7 @@ def ensure_period_index(
     function attempts to infer the frequency.
 
     Args:
-        df (pd.DataFrame): The DataFrame to check and potentially convert.
+        obj (pd.DataFrame | pd.Series): The pandas object to check and potentially convert.
         freq (str | None, optional): The target frequency for the PeriodIndex.
             Allowed values: 'B' (Business Day), 'D' (Calendar Day), 'W' (Weekly),
             'M' (Month), 'Q' (Quarter), 'Y' (Year).
@@ -102,15 +111,16 @@ def ensure_period_index(
             If provided, this frequency is used.
 
     Returns:
-        pd.DataFrame: A copy of the DataFrame with a PeriodIndex, or the
-                      original DataFrame if it already had a PeriodIndex with an
-                      allowed frequency.
+        pd.DataFrame | pd.Series: A copy of the object with a PeriodIndex, or the
+                                   original object if it already had a PeriodIndex
+                                   with an allowed frequency. The returned type
+                                   matches the input type.
 
     Raises:
         ValueError: If frequency inference fails (e.g., irregular DatetimeIndex)
                     and `freq` is not provided, or if conversion to PeriodIndex
                     fails after intermediate DatetimeIndex conversion.
-        TypeError: If the input is not a pandas DataFrame, if the index is a
+        TypeError: If the input is not a pandas DataFrame or Series, if the index is a
                    non-convertible numeric type, or if the index cannot be
                    parsed as datetime objects for conversion.
         AssertionError: If the resulting PeriodIndex frequency (either existing,
@@ -133,14 +143,26 @@ def ensure_period_index(
         >>> print(df_period_dt.index.freqstr)
         D
         >>>
-        >>> # DataFrame with PeriodIndex (no change)
+        >>> # Series with DatetimeIndex
+        >>> s_dt = pd.Series([1, 2, 3], index=dates)
+        >>> s_period_dt = ensure_period_index(s_dt.copy())
+        >>> print(isinstance(s_period_dt.index, pd.PeriodIndex))
+        True
+        >>> print(s_period_dt.index.freqstr)
+        D
+        >>>
+        >>> # Object with PeriodIndex (no change)
         >>> periods = pd.period_range('2023-01', periods=3, freq='ME') # Use 'ME'
         >>> df_p = pd.DataFrame({'data': [4, 5, 6]}, index=periods)
         >>> df_p_checked = ensure_period_index(df_p)
         >>> print(df_p_checked.index is df_p.index)
         True
+        >>> s_p = pd.Series([4, 5, 6], index=periods)
+        >>> s_p_checked = ensure_period_index(s_p)
+        >>> print(s_p_checked.index is s_p.index)
+        True
         >>>
-        >>> # DataFrame with string index (convertible)
+        >>> # Object with string index (convertible)
         >>> str_idx = ['2023-01', '2023-02', '2023-03']
         >>> df_str = pd.DataFrame({'data': [7, 8, 9]}, index=str_idx)
         >>> df_period_str = ensure_period_index(df_str.copy()) # Infer freq='ME'
@@ -149,7 +171,7 @@ def ensure_period_index(
         >>> print(df_period_str.index.freqstr)
         ME
         >>>
-        >>> # DataFrame with datetime.date index
+        >>> # Object with datetime.date index
         >>> date_idx = [date(2023, 1, 1), date(2023, 2, 1), date(2023, 3, 1)]
         >>> df_date = pd.DataFrame({'data': [10, 11, 12]}, index=date_idx)
         >>> df_period_date = ensure_period_index(df_date.copy(), freq='ME') # Specify freq 'ME'
@@ -158,7 +180,7 @@ def ensure_period_index(
         >>> print(df_period_date.index.freqstr)
         ME
         >>>
-        >>> # DataFrame with non-convertible numeric index (raises TypeError)
+        >>> # Object with non-convertible numeric index (raises TypeError)
         >>> df_range = pd.DataFrame({'data': [13, 14, 15]}, index=pd.RangeIndex(3))
         >>> try:
         ...     ensure_period_index(df_range)
@@ -166,7 +188,7 @@ def ensure_period_index(
         ...     print(e) # doctest: +ELLIPSIS
         Index type RangeIndex with dtype int64 cannot be converted to PeriodIndex...
         >>>
-        >>> # DataFrame with DatetimeIndex inferring unsupported freq (raises AssertionError)
+        >>> # Object with DatetimeIndex inferring unsupported freq (raises AssertionError)
         >>> irregular_dates = pd.to_datetime(['2023-01-01', '2023-01-03', '2023-01-05'])
         >>> df_irreg = pd.DataFrame({'data': [1, 2, 3]}, index=irregular_dates)
         >>> try:
@@ -180,42 +202,42 @@ def ensure_period_index(
         >>> print(df_irreg_period_forced_d.index)
         PeriodIndex(['2023-01-01', '2023-01-03', '2023-01-05'], dtype='period[D]')
     """
-    if not isinstance(df, pd.DataFrame):
-        raise TypeError("Input must be a pandas DataFrame.")
+    if not isinstance(obj, (pd.DataFrame, pd.Series)):
+        raise TypeError("Input must be a pandas DataFrame or Series.")
 
     # Define the allowed base frequencies using preferred aliases
     ALLOWED_BASE_FREQS = ["B", "D", "W", "M", "Q", "Y"]
 
     # 1. Check for definitely non-convertible numeric index types
-    if is_numeric_dtype(df.index):
+    if is_numeric_dtype(obj.index):
         raise TypeError(
-            f"Index type {type(df.index).__name__} with dtype {df.index.dtype} "
+            f"Index type {type(obj.index).__name__} with dtype {obj.index.dtype} "
             "cannot be converted to PeriodIndex. Only DatetimeIndex or potentially convertible "
             "object/string/date indexes are supported."
         )
 
     # 2. Check if already PeriodIndex
-    if isinstance(df.index, pd.PeriodIndex):
+    if isinstance(obj.index, pd.PeriodIndex):
         # Ensure the existing frequency is valid according to the new rule
-        assert df.index.freq in ALLOWED_BASE_FREQS, (
-            f"Existing PeriodIndex frequency '{df.index.freqstr}' is not in {ALLOWED_BASE_FREQS}"
+        assert obj.index.freq in ALLOWED_BASE_FREQS, (
+            f"Existing PeriodIndex frequency '{obj.index.freqstr}' is not in {ALLOWED_BASE_FREQS}"
         )
-        # Return the original DataFrame as no copy is needed
-        return df
+        # Return the original object as no copy is needed
+        return obj
 
     # 3. Check if DatetimeIndex
-    if isinstance(df.index, pd.DatetimeIndex):
+    if isinstance(obj.index, pd.DatetimeIndex):
         try:
             # Use provided freq if available, otherwise attempt inference
-            new_index = df.index.to_period(freq=freq)
-            # Create a copy to avoid modifying the original DataFrame
-            df_copy = df.copy()
-            df_copy.index = new_index
+            new_index = obj.index.to_period(freq=freq)
+            # Create a copy to avoid modifying the original object
+            obj_copy = obj.copy()
+            obj_copy.index = new_index
             # Assert the resulting frequency is valid
-            assert df_copy.index.freq in ALLOWED_BASE_FREQS, (
-                f"Resulting PeriodIndex frequency '{df_copy.index.freqstr}' is not in {ALLOWED_BASE_FREQS}"
+            assert obj_copy.index.freq in ALLOWED_BASE_FREQS, (
+                f"Resulting PeriodIndex frequency '{obj_copy.index.freqstr}' is not in {ALLOWED_BASE_FREQS}"
             )
-            return df_copy
+            return obj_copy
         except ValueError as e:
             # Reraise with a more specific message if conversion fails
             raise ValueError(
@@ -235,18 +257,18 @@ def ensure_period_index(
     # This block is reached if it's not numeric, not PeriodIndex, not DatetimeIndex.
     try:
         # Attempt conversion via pd.to_datetime first
-        datetime_index = pd.to_datetime(df.index)
+        datetime_index = pd.to_datetime(obj.index)
         # Now convert the intermediate DatetimeIndex to PeriodIndex
         try:
             new_index = datetime_index.to_period(freq=freq)
             # Create a copy
-            df_copy = df.copy()
-            df_copy.index = new_index
+            obj_copy = obj.copy()
+            obj_copy.index = new_index
             # Assert the resulting frequency is valid
-            assert df_copy.index.freq in ALLOWED_BASE_FREQS, (
-                f"Resulting PeriodIndex frequency '{df_copy.index.freqstr}' is not in {ALLOWED_BASE_FREQS}"
+            assert obj_copy.index.freq in ALLOWED_BASE_FREQS, (
+                f"Resulting PeriodIndex frequency '{obj_copy.index.freqstr}' is not in {ALLOWED_BASE_FREQS}"
             )
-            return df_copy
+            return obj_copy
         except ValueError as e:
             # Handle failure in to_period (e.g., freq inference failed on the intermediate DatetimeIndex)
             raise ValueError(
@@ -264,7 +286,7 @@ def ensure_period_index(
     except (ValueError, TypeError, pd.errors.OutOfBoundsDatetime) as e:
         # Catch errors indicating the original index wasn't convertible to DatetimeIndex
         raise TypeError(
-            f"Index type {type(df.index).__name__} cannot be converted to PeriodIndex. "
+            f"Index type {type(obj.index).__name__} cannot be converted to PeriodIndex. "
             f"Could not parse index values as datetime objects. Original error: {e}"
         ) from e
     except Exception as e:
@@ -354,7 +376,7 @@ def merge_on_index(
 
 
 def ts_concat(
-    objs: list[pd.DataFrame | pd.Series],
+    objs: pd.DataFrame | pd.Series | list[pd.DataFrame | pd.Series],
     axis: Literal[0, 1, "index", "columns"] = 0,
     join: Literal["inner", "outer"] = "outer",
     ignore_index: bool = False,
@@ -362,51 +384,74 @@ def ts_concat(
     """
     Concatenates a sequence of pandas objects along an axis after validation.
 
+    If a single DataFrame or Series is passed (either directly or in a list of length 1),
+    it is returned directly without concatenation or validation beyond type checking.
+
+    For lists with multiple objects:
     Validates that all objects have the same index type and that no object
     has duplicate index values. If concatenating along columns (axis=1),
     it also validates that there are no overlapping column names between
     the DataFrames.
 
     Args:
-        objs (list[pd.DataFrame | pd.Series]): A sequence of pandas Series or
-            DataFrame objects to concatenate.
+        objs (pd.DataFrame | pd.Series | list[pd.DataFrame | pd.Series]):
+            A single pandas Series or DataFrame, or a sequence of them to concatenate.
         axis (Literal[0, 1, 'index', 'columns'], default 0): The axis to
             concatenate along. 0/'index' for rows, 1/'columns' for columns.
+            Ignored if only a single object is provided.
         join (Literal['inner', 'outer'], default 'outer'): How to handle
             indexes on the other axis (or axes). 'outer' for union, 'inner'
-            for intersection.
+            for intersection. Ignored if only a single object is provided.
         ignore_index (bool, default False): If True, do not use the index
             values along the concatenation axis. The resulting axis will be
-            labeled 0, ..., n - 1.
+            labeled 0, ..., n - 1. Ignored if only a single object is provided.
 
     Returns:
-        pd.DataFrame | pd.Series: The concatenated pandas object. Type depends
-            on the input objects and the axis of concatenation.
+        pd.DataFrame | pd.Series: The concatenated pandas object, or the single
+            input object if only one was provided. Type depends on the input
+            objects and the axis of concatenation.
 
     Raises:
-        TypeError: If objs is not a list or contains non-pandas objects.
-        ValueError: If objs is empty, if any object has duplicate index values,
-                    if objects have incompatible index types, or if concatenating
-                    along columns and duplicate column names exist across objects.
+        TypeError: If objs is not a pandas object or a list of pandas objects,
+                   or if a list contains non-pandas objects.
+        ValueError: If objs is an empty list, if any object in a list of multiple
+                    objects has duplicate index values, if objects in a list
+                    have incompatible index types, or if concatenating
+                    multiple objects along columns and duplicate column names exist.
 
     Examples:
         >>> import pandas as pd
+        >>>
+        >>> # Example with single DataFrame input
+        >>> df_single = pd.DataFrame({'A': [1, 2]})
+        >>> result_single_df = ts_concat(df_single)
+        >>> print(result_single_df is df_single)
+        True
+        >>>
+        >>> # Example with list containing single Series
+        >>> s_single_in_list = pd.Series(['a', 'b'])
+        >>> result_single_s = ts_concat([s_single_in_list])
+        >>> print(result_single_s is s_single_in_list)
+        True
+        >>>
+        >>> # Concatenate multiple Series (rows, axis=0)
         >>> s1 = pd.Series(['a', 'b'], index=pd.RangeIndex(2))
         >>> s2 = pd.Series(['c', 'd'], index=pd.RangeIndex(start=2, stop=4))
-        >>> ts_concat([s1, s2]) # Concatenate rows (axis=0)
+        >>> ts_concat([s1, s2])
         0    a
         1    b
         2    c
         3    d
         dtype: object
-
+        >>>
+        >>> # Concatenate multiple DataFrames (columns, axis=1)
         >>> df1 = pd.DataFrame({'A': [1, 2]}, index=pd.RangeIndex(2))
         >>> df2 = pd.DataFrame({'B': [3, 4]}, index=pd.RangeIndex(2))
-        >>> ts_concat([df1, df2], axis=1) # Concatenate columns (axis=1)
+        >>> ts_concat([df1, df2], axis=1)
            A  B
         0  1  3
         1  2  4
-
+        >>>
         >>> # Example with incompatible index types (raises ValueError)
         >>> df3 = pd.DataFrame({'C': [5, 6]}, index=pd.Index(['x', 'y']))
         >>> try:
@@ -414,15 +459,15 @@ def ts_concat(
         ... except ValueError as e:
         ...     print(e)
         Index types differ: RangeIndex vs Index
-
+        >>>
         >>> # Example with duplicate index (raises ValueError)
         >>> df_dup_idx = pd.DataFrame({'A': [7, 8]}, index=pd.RangeIndex(start=0, stop=2))
         >>> try:
         ...     ts_concat([df1, df_dup_idx]) # df1 and df_dup_idx share index 0, 1
         ... except ValueError as e:
-        ...     print(e)
+        ...     print(e) # Note: pandas.concat doesn't raise by default, but our check does
         Object at index 1 has duplicate index values.
-
+        >>>
         >>> # Example with duplicate columns when axis=1 (raises ValueError)
         >>> df_dup_col = pd.DataFrame({'A': [9, 10]}, index=pd.RangeIndex(2))
         >>> try:
@@ -435,61 +480,81 @@ def ts_concat(
         pandas.concat: The underlying concatenation function.
     """
     # --- Input Validation ---
+
+    # Handle single object input directly
+    if isinstance(objs, (pd.DataFrame, pd.Series)):
+        return objs
+
+    # Validate list input
     if not isinstance(objs, list):
-        raise TypeError("Input 'objs' must be a list of pandas DataFrames or Series.")
+        raise TypeError(
+            "Input 'objs' must be a pandas DataFrame, a pandas Series, or a list of them."
+        )
     if not objs:
         raise ValueError("Input 'objs' list cannot be empty.")
 
+    # Handle list with a single object
+    if len(objs) == 1:
+        single_obj = objs[0]
+        if not isinstance(single_obj, (pd.DataFrame, pd.Series)):
+            raise TypeError(
+                "The single item in the 'objs' list must be a pandas DataFrame or Series."
+            )
+        return single_obj
+
+    # --- Validation for List with Multiple Objects ---
     # Check for duplicate indices, compatible index types, and column name collisions
-    # Also check if Series have names when concatenating columns
     first_obj = objs[0]
+    if not isinstance(first_obj, (pd.DataFrame, pd.Series)):
+        raise TypeError("Object at index 0 is not a pandas DataFrame or Series.")
+    if first_obj.index.duplicated().any():
+        raise ValueError("Object at index 0 has duplicate index values.")
+
     all_columns = set()
     if isinstance(first_obj, pd.DataFrame) and axis in [1, "columns"]:
         all_columns.update(first_obj.columns)
+    elif isinstance(first_obj, pd.Series) and axis in [1, "columns"]:
+        if first_obj.name is None:
+            raise ValueError(
+                "Series at index 0 must have a 'name' attribute for column concatenation."
+            )
+        all_columns.add(first_obj.name)
 
-    for i, obj in enumerate(objs):
+    for i, obj in enumerate(objs[1:], start=1):  # Start from the second object
         if not isinstance(obj, (pd.DataFrame, pd.Series)):
             raise TypeError(f"Object at index {i} is not a pandas DataFrame or Series.")
         if obj.index.duplicated().any():
             raise ValueError(f"Object at index {i} has duplicate index values.")
 
         # Check index compatibility against the first object
-        if i > 0:
-            compatible, message = have_same_index_type(first_obj, obj)
-            if not compatible:
-                raise ValueError(message)
+        compatible, message = have_same_index_type(first_obj, obj)
+        if not compatible:
+            raise ValueError(message)
 
         # Checks specific to column concatenation (axis=1)
         if axis in [1, "columns"]:
             if isinstance(obj, pd.DataFrame):
                 current_columns = set(obj.columns)
-                if i > 0:  # Only check collisions with previous objects' columns
-                    intersection = all_columns.intersection(current_columns)
-                    if intersection:
-                        raise ValueError(
-                            f"Duplicate column names found: {intersection}"
-                        )
-                all_columns.update(
-                    current_columns
-                )  # Add current columns for next checks
+                intersection = all_columns.intersection(current_columns)
+                if intersection:
+                    raise ValueError(f"Duplicate column names found: {intersection}")
+                all_columns.update(current_columns)
             elif isinstance(obj, pd.Series):
                 if obj.name is None:
                     raise ValueError(
                         f"Series at index {i} must have a 'name' attribute for column concatenation."
                     )
-                # Check potential collision between Series name and existing columns
                 if obj.name in all_columns:
                     raise ValueError(
                         f"Duplicate column name found: '{obj.name}' (from Series at index {i})"
                     )
-                all_columns.add(obj.name)  # Add series name to column set
+                all_columns.add(obj.name)
 
     # --- Concatenation ---
-    # Note: verify_integrity=True regarding index is implicitly handled by the check above.
     return pd.concat(
         objs=objs,
         axis=axis,
         join=join,
         ignore_index=ignore_index,
-        sort=True if axis in [1, "columns"] else False,  # Sort columns when axis=1
+        sort=True if axis in [1, "columns"] else False,  # Sort index when axis=1
     )
