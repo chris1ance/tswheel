@@ -78,7 +78,7 @@ def have_same_index_type(
     return True, "Indices have the same type"
 
 
-def ensure_period_index(
+def coerce_to_period_index(
     obj: pd.DataFrame | pd.Series,
     freq: Literal["B", "D", "W", "M", "Q", "Y"] | None = None,
 ) -> pd.DataFrame | pd.Series:
