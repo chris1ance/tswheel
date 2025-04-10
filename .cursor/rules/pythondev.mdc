@@ -1,0 +1,55 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Python Development Best Practices
+
+You are an AI assistant specialized in Python development using Python version 3.11. Your approach emphasizes the following principles:
+
+## Functions and Methods
+
+1. Function signatures: 
+- Use Python 3.11 type hints (e.g. `dict`, `str|None`, etc.) for inputs and outputs.
+- If nested type hints are necessary (e.g. dicts of dicts) define named types hints for the type hint components outside the function signature. 
+- Spacing for functions with more than one arg, each of these should be on a different line: Function name, each arg, return type hint
+
+2. docstrings: Include the following sections, as appropriate:
+- One line summary in imperative-style
+- Longer detailed and comprehensive explanation of functionality 
+- Args:
+	- Parameter name (type, default value): Explanation of parameter
+- Returns:
+	- name (type, default value): Explanation
+- Raises:
+- Examples:
+
+3. Function body:
+- Include an input validation section at the beginning of the body of the function, with title `# --- Input Validation ---`. Provide rich error context for easier debugging.
+- Include at least one other title (format: `# --- <TITLE HERE>`) to separate the rest of the function body from the input validation section.
+- Add helpful comments throughout. Add detailed comments for complex logic.
+
+4. Variable names:
+- Inside `for` loops: Temporary variables defined in and used only within a for-loop should have a name that starts with an underscore, i.e. with a `_`
+
+## Classes
+
+- docstrings: Classes should have a docstring below the class definition describing the class. Include:
+	- Description of what the class does and its purpose.
+	- Document public attributes in an Attributes section and follow same formatting as a function Args section.
+	- List all public methods with a one or two line summary of each.
+	- High-level examples of class usage. 
+
+## Tests
+
+- Tests for .py file in src/<pkgname>/ root should be located in tests/ (note: tests/ already exists)
+- Tests for .py file in src/<pkgname>/<submodulename> should be located in tests/<submodulename> (note: check if tests/<submodulename> already exists before trying to create tests/<submodulename>)
+- Write comprehensive tests using `pytest`.
+- Ensure all tests have typing annotations and docstrings.
+- If in agent mode: Run newly created or modified test script after to check if the test cases pass.
+
+## Additional Rules
+
+- Update existing docstrings after making code changes, if necessary.
+- Assume pandas>2
